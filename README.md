@@ -1,31 +1,33 @@
-# Ariño — lexer nativo binario
+# Ariño — lexer y máquina virtual IL en binarios nativos
 
-Lexer inicial de frases en español. La implementación y el ejecutable de pruebas se distribuyen como binarios ELF nativos, no como código C o ensamblador.
+Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se mantiene en español. El repositorio distribuye artefactos binarios; no conserva fuentes C ni ensamblador de las implementaciones nativas.
 
-## Binarios
+## Lexer
 
-- `libarino_lexer.so`: biblioteca compartida Linux x86-64 (System V ABI).
+- `libarino_lexer.so`: biblioteca Linux x86-64 / System V ABI.
 - `arino_lexer_tests`: ejecutable de pruebas nativo que carga la biblioteca desde su propio directorio.
-- GitHub Actions ejecuta las pruebas y publica ambos binarios en cada build exitoso.
+- El lexer reconoce palabras de acción, entidades de IA, operadores lógicos, símbolos y números decimales con signo opcional; preserva los lexemas como vistas zero-copy al búfer original.
 
-Los binarios son específicos de Linux x86-64 y de un entorno GNU/Linux compatible. El repositorio no conserva fuentes ni permite reconstruirlos. No son bytecode portable.
+GitHub Actions valida los binarios y ejecuta las pruebas del lexer.
 
-## Interfaz binaria
+## Ariño IL v1
 
-La biblioteca exporta `arino_lex`. Recibe un puntero al búfer de entrada, su longitud en bytes, un puntero a un arreglo de salida preasignado, su capacidad y un puntero opcional al estado. Devuelve la cantidad de tokens producidos. No reserva memoria: cada lexema es una vista al búfer original, que debe seguir vivo mientras se usen los tokens.
+La IL es un formato interno de bytecode; **no modifica la sintaxis visible en español**. `arino_il_vm` es una VM/verificador/desensamblador nativa Linux x86-64. Los archivos `.aril` son bytecode de la VM, no código máquina de la CPU. Consulta el [contrato del formato, la ISA y el mapeo previsto de AST/símbolos](docs/ARINO_IL_V1.md).
 
-En la ABI Linux x86-64, cada token ocupa 40 bytes y se alinea a 8 bytes: puntero al lexema en el desplazamiento 0; longitud en bytes en 8; offset en la entrada en 16; tipo en 24; hash en 28; bits IEEE-754 binary64 en 32. El estado ocupa 16 bytes: código de error en 0 y offset de error en 8. Los punteros y `size_t` son de 64 bits; los campos de tipo y hash son de 32 bits.
+Uso:
 
-Tipos de token: 0 palabra, 1 verbo de acción, 2 entidad de IA, 3 operador lógico, 4 número, 5 símbolo. Estados: 0 éxito, 1 argumento inválido, 2 número mal formado, 3 número fuera de rango, 4 salida insuficiente. En éxito, el offset de estado es la longitud de entrada; en error, identifica el byte problemático.
+```sh
+./arino_il_vm --verify arino_il_demo.aril
+./arino_il_vm --disasm arino_il_demo.aril
+./arino_il_vm --run arino_il_demo.aril
+./arino_il_vm --trace arino_il_demo.aril
+./arino_il_vm --max-steps 20 arino_il_infinite.aril
+```
 
-## Comportamiento léxico
+La VM valida encabezado y bytecode (opcodes, operandos, índices y destinos de salto) y ejecuta operaciones I64/F64, comparaciones, saltos y slots locales; informa trampas de ejecución, incluidos overflow, división por cero, tipos incompatibles, underflow y agotamiento del límite de instrucciones. Las fixtures `.aril` cubren resultados correctos, control de flujo, constantes, operaciones de pila, aritmética/comparación F64, verificación negativa y traps.
 
-Usa clases de byte y una tabla DFA de transiciones/acciones. Conserva los bytes UTF-8 dentro del lexema, pero no valida secuencias malformadas ni normaliza mayúsculas.
+CI prueba el formato del ELF, verifica y ejecuta las fixtures con resultados exactos, comprueba los rechazos/traps esperados y publica los binarios y fixtures como artefacto descargable.
 
-- Verbos de acción: `entrenar`, `entrena`, `clasificar`, `clasifica`, `predecir`, `predice`.
-- Entidades de IA: `modelo`, `datos`, `tensor`, `capa`.
-- Operadores lógicos: `si`, `entonces`, `mientras`.
-- Las demás palabras se clasifican como palabra; signos como símbolo. Se descartan espacios y controles ASCII.
-- Reconoce números decimales con signo opcional y punto decimal, y conserva su patrón binary64. No reconoce exponentes como `1e-3`.
+## Límites
 
-El lexer no es un parser. Tampoco asigna direcciones de memoria a tensores: esa tarea corresponde a una capa posterior.
+El lexer no es un parser. La VM hace ejecutable el bytecode escrito directamente en `.aril`, pero **todavía no hay parser/AST ni emisor que compile programas fuente Ariño a IL**; por tanto, Ariño no cuenta aún con un compilador integral. El mapeo descrito en la documentación es un contrato de diseño para esa etapa futura. Los binarios publicados son específicos de Linux x86-64 y no son portables a otras arquitecturas.

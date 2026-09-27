@@ -153,7 +153,7 @@ static ArinoError parse_decimal64(const uint8_t *bytes,
                 *bad_index = i;
                 return ARINO_ERROR_NUMBER_RANGE;
             }
-            scale *= 0.1;
+            scale /= 10.0;
             ++i;
         }
     }

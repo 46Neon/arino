@@ -1,2 +1,4 @@
 arino_lexer_tests linguist-generated=true
 libarino_lexer.so linguist-generated=true
+arino_il_vm linguist-generated=true
+arino_il_*.aril linguist-generated=true

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   test:
-    name: Verify native binaries and Ariño IL v1
+    name: Verify native binaries and Ariño frontend/IL v1
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -21,9 +21,72 @@ jobs:
           file libarino_lexer.so | grep -F 'ELF 64-bit LSB shared object, x86-64'
           file arino_lexer_tests | grep -F 'ELF 64-bit LSB pie executable, x86-64'
           file arino_il_vm | grep -F 'ELF 64-bit LSB executable, x86-64'
-          chmod +x arino_il_vm
+          file arino_ast_compiler | grep -F 'ELF 64-bit LSB executable, x86-64'
+          chmod +x arino_il_vm arino_ast_compiler
       - name: Run lexer tests
         run: ./arino_lexer_tests
+      - name: Test AST, Spanish aliases, semantics and emitted IL
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          compile_run() {
+            local name="$1" source="$2" expected="$3"
+            printf '%s' "$source" > "$tmp/$name.ari"
+            ./arino_ast_compiler --compile "$tmp/$name.ari" "$tmp/$name.aril"
+            ./arino_il_vm --verify "$tmp/$name.aril"
+            local actual
+            actual="$(./arino_il_vm --run "$tmp/$name.aril")"
+            printf '%s => %s\n' "$source" "$actual"
+            test "$actual" = "$expected"
+          }
+          printf '%s' 'sumar 2 y 3' > "$tmp/ast.ari"
+          ./arino_ast_compiler --ast "$tmp/ast.ari" | grep -F '0001 PROGRAM'
+          ./arino_ast_compiler --ast "$tmp/ast.ari" | grep -F '0010 ADD'
+          ./arino_ast_compiler --check "$tmp/ast.ari"
+
+          # Todas las formas documentadas se normalizan a los cuatro operadores.
+          compile_run add-sumar 'sumar 2 y 3' 'RESULT I64(5)'
+          compile_run add-anadir 'añadir 2 y 3' 'RESULT I64(5)'
+          compile_run add-adicionar 'adicionar 2 y 3' 'RESULT I64(5)'
+          compile_run add-mas-acento '2 más 3' 'RESULT I64(5)'
+          compile_run add-mas-ascii '2 mas 3' 'RESULT I64(5)'
+          compile_run sub-restar 'restar 7 y 2' 'RESULT I64(5)'
+          compile_run sub-quitar 'quitar 7 y 2' 'RESULT I64(5)'
+          compile_run sub-sustraer 'sustraer 7 y 2' 'RESULT I64(5)'
+          compile_run sub-menos '7 menos 2' 'RESULT I64(5)'
+          compile_run mul-multiplicar 'multiplicar 2 y 3' 'RESULT I64(6)'
+          compile_run mul-por '2 por 3' 'RESULT I64(6)'
+          compile_run mul-veces '3 veces 2' 'RESULT I64(6)'
+          compile_run div-dividir 'dividir 8 y 2' 'RESULT I64(4)'
+          compile_run div-entre '8 entre 2' 'RESULT I64(4)'
+          compile_run div-partido '8 partido 2' 'RESULT I64(4)'
+          compile_run div-con 'dividir 8 con 2' 'RESULT I64(4)'
+
+          compile_run locals 'x = 7; y = x por 2; y menos 3' 'RESULT I64(11)'
+          ./arino_ast_compiler --compile "$tmp/locals.ari" "$tmp/locals.aril" | grep -F 'locals=2'
+          ./arino_il_vm --disasm "$tmp/locals.aril" | grep -F 'STORE        0'
+          ./arino_il_vm --disasm "$tmp/locals.aril" | grep -F 'STORE        1'
+          compile_run f64 '0.5 más 1.25' 'RESULT F64(1.75)'
+          compile_run folded '(2 más 3) por 4' 'RESULT I64(20)'
+          disasm="$(./arino_il_vm --disasm "$tmp/folded.aril")"
+          grep -F 'PUSH_I64     20' <<< "$disasm"
+          test "$(grep -c 'PUSH_I64' <<< "$disasm")" -eq 1
+          test "$(grep -c 'HALT' <<< "$disasm")" -eq 1
+
+          expect_reject() {
+            local source="$1"
+            printf '%s' "$source" > "$tmp/invalid.ari"
+            if ./arino_ast_compiler --check "$tmp/invalid.ari" >"$tmp/invalid.log" 2>&1; then
+              echo "expected semantic rejection: $source" >&2
+              exit 1
+            fi
+            cat "$tmp/invalid.log"
+          }
+          expect_reject 'x más 2'
+          expect_reject '1 más 2.0'
+          expect_reject 'x = 3; x = 2.0'
       - name: Verify and execute valid IL fixtures
         shell: bash
         run: |
@@ -74,13 +137,14 @@ jobs:
           expect_trap arino_il_type_error.aril 'type mismatch' --run
           expect_trap arino_il_overflow.aril 'addition overflow' --run
           expect_trap arino_il_infinite.aril 'instruction limit exceeded' --max-steps 20
-      - name: Publish lexer and Ariño IL artifacts
+      - name: Publish Ariño native and IL artifacts
         uses: actions/upload-artifact@v4
         with:
           name: arino-native-and-il-v1-linux-x86_64
           path: |
             libarino_lexer.so
             arino_lexer_tests
+            arino_ast_compiler
             arino_il_vm
             arino_il_*.aril
           if-no-files-found: error

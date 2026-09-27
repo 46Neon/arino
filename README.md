@@ -1,6 +1,6 @@
-# Ariño — lexer y máquina virtual IL en binarios nativos
+# Ariño — frontend AST e IL en binarios nativos
 
-Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se mantiene en español. El repositorio distribuye artefactos binarios; no conserva fuentes C ni ensamblador de las implementaciones nativas.
+Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se mantiene en español. El repositorio distribuye artefactos binarios nativos; no conserva fuentes C ni ensamblador de las implementaciones nativas.
 
 ## Lexer
 
@@ -8,27 +8,30 @@ Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se m
 - `arino_lexer_tests`: ejecutable de pruebas nativo que carga la biblioteca desde su propio directorio.
 - El lexer reconoce palabras de acción, entidades de IA, operadores lógicos, símbolos y números decimales con signo opcional; preserva los lexemas como vistas zero-copy al búfer original.
 
-GitHub Actions valida los binarios y ejecuta las pruebas del lexer.
+## Frontend AST (subconjunto v1)
 
-## Ariño IL v1
+`arino_ast_compiler` consume el lexer y compila expresiones aritméticas I64/F64 y asignaciones separadas por punto y coma. Reconoce las formas visibles en español —por ejemplo, `sumar 2 y 3`, `2 más 3` y `dividir 8 con 2`—, conserva spans del fuente, valida tipos y variables, pliega expresiones constantes seguras y emite Ariño IL v1. Incluye un volcado AST y un modo de análisis sin emisión. La [especificación AST v1](docs/ARINO_AST_V1.md) documenta nodos, alias, gramática admitida y límites.
 
-La IL es un formato interno de bytecode; **no modifica la sintaxis visible en español**. `arino_il_vm` es una VM/verificador/desensamblador nativa Linux x86-64. Los archivos `.aril` son bytecode de la VM, no código máquina de la CPU. Consulta el [contrato del formato, la ISA y el mapeo previsto de AST/símbolos](docs/ARINO_IL_V1.md).
+La IL es interna: esta etapa no traduce ni reemplaza la sintaxis pública en español. `arino_il_vm` es una VM/verificador/desensamblador nativa Linux x86-64; los archivos `.aril` son bytecode de la VM, no código máquina de la CPU. Consulta el [contrato IL v1](docs/ARINO_IL_V1.md).
 
-Tras descargar o clonar el ejecutable, habilita su permiso de ejecución y úsalo así:
+Uso desde la raíz del repositorio:
 
 ```sh
-chmod +x arino_il_vm
-./arino_il_vm --verify arino_il_demo.aril
-./arino_il_vm --disasm arino_il_demo.aril
-./arino_il_vm --run arino_il_demo.aril
-./arino_il_vm --trace arino_il_demo.aril
-./arino_il_vm --max-steps 20 arino_il_infinite.aril
+chmod +x arino_ast_compiler arino_il_vm
+printf '%s' 'sumar 2 y 3' > suma.ari
+./arino_ast_compiler --ast suma.ari
+./arino_ast_compiler --check suma.ari
+./arino_ast_compiler --compile suma.ari suma.aril
+./arino_il_vm --verify suma.aril
+./arino_il_vm --run suma.aril
 ```
+
+## VM IL v1
 
 La VM valida encabezado y bytecode (opcodes, operandos, índices y destinos de salto) y ejecuta operaciones I64/F64, comparaciones, saltos y slots locales; informa trampas de ejecución, incluidos overflow, división por cero, tipos incompatibles, underflow y agotamiento del límite de instrucciones. Las fixtures `.aril` cubren resultados correctos, control de flujo, constantes, operaciones de pila, aritmética/comparación F64, verificación negativa y traps.
 
-CI prueba el formato del ELF, verifica y ejecuta las fixtures con resultados exactos, comprueba los rechazos/traps esperados y publica los binarios y fixtures como artefacto descargable.
+CI valida los ELF x86-64, ejecuta las pruebas del lexer, conserva las pruebas IL existentes y verifica compilación/emisión/ejecución del subconjunto AST, errores semánticos y plegado de constantes. También publica los binarios y fixtures como artefacto descargable.
 
 ## Límites
 
-El lexer no es un parser. La VM hace ejecutable el bytecode escrito directamente en `.aril`, pero **todavía no hay parser/AST ni emisor que compile programas fuente Ariño a IL**; por tanto, Ariño no cuenta aún con un compilador integral. El mapeo descrito en la documentación es un contrato de diseño para esa etapa futura. Los binarios publicados son específicos de Linux x86-64 y no son portables a otras arquitecturas.
+Este frontend aún no analiza toda la gramática de Ariño. No admite bloques, scopes anidados, condiciones, bucles, funciones/llamadas ni sintaxis específica de tensores o IA; tampoco aplica promociones implícitas entre I64 y F64. El hecho de que la VM IL tenga instrucciones de control de flujo no implica que este frontend genere esas construcciones. Por tanto, el AST y el compilador son funcionales para el subconjunto documentado, no un compilador integral de Ariño. Los binarios publicados son específicos de Linux x86-64 y no son portables a otras arquitecturas.

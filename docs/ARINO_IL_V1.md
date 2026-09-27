@@ -104,7 +104,7 @@ La VM proporciona `--disasm` (offset de código, bytes, mnemonic y operandos) y 
 
 ## VM y pruebas disponibles
 
-El ejecutable `arino_il_vm` ofrece:
+El ejecutable `arino_il_vm` ofrece (tras descargarlo o clonarlo, ejecutar `chmod +x arino_il_vm` para habilitar permisos de ejecución):
 
 ```sh
 ./arino_il_vm --verify archivo.aril

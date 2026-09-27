@@ -14,9 +14,10 @@ GitHub Actions valida los binarios y ejecuta las pruebas del lexer.
 
 La IL es un formato interno de bytecode; **no modifica la sintaxis visible en español**. `arino_il_vm` es una VM/verificador/desensamblador nativa Linux x86-64. Los archivos `.aril` son bytecode de la VM, no código máquina de la CPU. Consulta el [contrato del formato, la ISA y el mapeo previsto de AST/símbolos](docs/ARINO_IL_V1.md).
 
-Uso:
+Tras descargar o clonar el ejecutable, habilita su permiso de ejecución y úsalo así:
 
 ```sh
+chmod +x arino_il_vm
 ./arino_il_vm --verify arino_il_demo.aril
 ./arino_il_vm --disasm arino_il_demo.aril
 ./arino_il_vm --run arino_il_demo.aril

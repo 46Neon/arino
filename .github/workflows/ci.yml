@@ -5,21 +5,20 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build native x86-64 lexer library
-        run: cc -std=gnu11 -O2 -Wall -Wextra -Werror -fPIC -shared arino_lexer.c fnv1a_x86_64.S -lm -o libarino_lexer.so
-      - name: Build compiled lexer tests
-        run: cc -std=gnu11 -O2 -Wall -Wextra -Werror test_lexer.c -L. -larino_lexer -Wl,-rpath,'$ORIGIN' -lm -o arino_lexer_tests
-      - name: Run compiled lexer tests
+      - name: Verify native x86-64 ELF files
+        run: |
+          file libarino_lexer.so
+          file arino_lexer_tests
+          file libarino_lexer.so | grep -F 'ELF 64-bit LSB shared object, x86-64'
+          file arino_lexer_tests | grep -F 'ELF 64-bit LSB pie executable, x86-64'
+      - name: Run compiled lexer tests against the shared library
         run: ./arino_lexer_tests
-      - name: Upload native binaries
+      - name: Publish native binaries
         uses: actions/upload-artifact@v4
         with:
           name: arino-lexer-linux-x86_64
@@ -27,15 +26,3 @@ jobs:
             libarino_lexer.so
             arino_lexer_tests
           if-no-files-found: error
-      - name: Commit native binaries to main
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add libarino_lexer.so arino_lexer_tests
-          if git diff --cached --quiet; then
-            echo 'Native binaries are already current.'
-          else
-            git commit -m 'Add compiled native lexer binaries'
-            git push
-          fi

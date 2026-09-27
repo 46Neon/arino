@@ -4,7 +4,7 @@
 
 Esta especificación define el formato del bytecode y el contrato de ejecución de la VM. Es una capa interna: **no cambia la sintaxis visible en español de Ariño**. El flujo previsto es fuente Ariño en español → lexer/parser → AST → IL binario.
 
-Esta entrega incorpora la especificación y el artefacto binario de prueba `arino_il_demo.aril`. **Todavía no incluye una VM ni un compilador AST→IL ejecutables**; por tanto, el fixture está validado estructuralmente, pero aún no puede ejecutarse en una VM de Ariño. El bytecode no es código máquina de la CPU: lo ejecutará una VM nativa.
+Esta entrega incorpora la VM, verificador, desensamblador y fixtures `.aril` ejecutables. El bytecode no es código máquina de la CPU: lo ejecuta la VM nativa `arino_il_vm`, un ELF Linux x86-64. La IL es interna y no cambia la sintaxis visible en español de Ariño.
 
 ## 1. ISA stack-based
 
@@ -79,13 +79,13 @@ El resultado de HALT es el valor superior de la pila, si la hay. El registro de 
 
 ## 4. AST y símbolos
 
-El compilador no traduce palabras directamente a bytes: primero valida semántica y tipos del AST, luego emite IL tipada. Para una suma, emite expresión izquierda, expresión derecha y ADD_I64 o ADD_F64 según el tipo. Una condición emite comparación a BOOL y después JZ/JNZ. Asignaciones usan STORE; lecturas, LOAD. Los saltos se emiten inicialmente con etiquetas y se parchean al conocer el destino; el desplazamiento se calcula desde el final del operando s32.
+Cuando exista un frontend, el compilador no traducirá palabras directamente a bytes: primero validará semántica y tipos del AST, luego emitirá IL tipada. **Actualmente este repositorio aún no incorpora parser, AST ni emisor AST→IL**; el mapeo siguiente especifica su diseño futuro y no implica que exista un compilador de fuente a bytecode. Para una suma, emite expresión izquierda, expresión derecha y ADD_I64 o ADD_F64 según el tipo. Una condición emite comparación a BOOL y después JZ/JNZ. Asignaciones usan STORE; lecturas, LOAD. Los saltos se emiten inicialmente con etiquetas y se parchean al conocer el destino; el desplazamiento se calcula desde el final del operando s32.
 
 Tabla de símbolos temporal del compilador: nombre, ámbito, tipo, slot u16, mutabilidad y span del fuente (archivo/línea/columna). Cada nombre se resuelve a un slot dentro de su ámbito. El bytecode no almacena nombres: cada slot representa la dirección lógica `frame_base + slot × 8` para el payload; la VM mantiene además su etiqueta de tipo. Al salir de un ámbito, el compilador puede reutilizar slots no vivos. La cantidad máxima asignada se escribe en `local_count`.
 
 ## 5. Desensamblador
 
-Formato recomendado por instrucción: offset de código, bytes originales, mnemonic y operandos decodificados; el modo trace agrega pila antes/después, slots tocados e IP siguiente. Los offsets son relativos al inicio del código.
+La VM proporciona `--disasm` (offset de código, bytes, mnemonic y operandos) y `--trace` (ejecución con estado de pila e IP). Los offsets son relativos al inicio del código.
 
 ```text
 00000000  01 06 00 00 00 00 00 00 00  PUSH_I64 6       ; [] -> [I64]
@@ -102,4 +102,20 @@ Formato recomendado por instrucción: offset de código, bytes originales, mnemo
 
 `arino_il_demo.aril` tiene encabezado ARIL v1, sin constantes, `local_count=1`, `max_stack=2`, código de 36 bytes. Calcula 6+7, guarda/carga el slot 0, resta 10 y termina con I64 3. SHA-256: `ec2f9a207b69501577cf7eef9d60f6ce60ad2a1cbbc4f5785904600ff7d61f7a`.
 
-**Límite actual:** se creó la especificación y el fixture binario; el repositorio aún no tiene VM, verificador ni compilador AST→IL ejecutables. No considerar el IL operativo hasta implementar esos componentes y pasar pruebas de ejecución.
+## VM y pruebas disponibles
+
+El ejecutable `arino_il_vm` ofrece:
+
+```sh
+./arino_il_vm --verify archivo.aril
+./arino_il_vm --disasm archivo.aril
+./arino_il_vm --run archivo.aril
+./arino_il_vm --trace archivo.aril
+./arino_il_vm --max-steps 20 archivo.aril
+```
+
+El verificador comprueba encabezado/secciones, opcodes e inmediatos, índices y destinos de salto en fronteras de instrucción. La VM ejecuta la ISA documentada y detecta trampas como overflow I64, división por cero, underflow, tipos incompatibles, locals no inicializados y límite de instrucciones. GitHub Actions verifica el formato ELF x86-64, verifica/ejecuta fixtures válidas con resultados exactos, confirma rechazos y traps, y publica el VM junto con las fixtures como artefacto.
+
+Fixtures válidas: `arino_il_demo.aril` (resultado 3 con LOAD/STORE), `arino_il_loop.aril` (bucle y ramas, 10), `arino_il_stack.aril` (DUP/SWAP/POP, 5), `arino_il_branch.aril` (EQ_I64/JNZ, 1), `arino_il_float.aril` (constantes y aritmética/comparaciones F64), `arino_il_constants.aril` (pool I64, 84), `arino_il_f64_imm.aril` (PUSH_F64, 4) y `arino_il_div_i64.aril` (20/4, 5). Fixtures negativas comprueban saltos inválidos, opcode desconocido, inmediato truncado, división por cero, underflow, tipos incorrectos, overflow y agotamiento del límite de pasos.
+
+**Límite:** el bytecode IL ya es ejecutable y se valida en CI, pero todavía no existe parser/AST ni emisor AST→IL para compilar fuente Ariño. El flujo desde sintaxis visible en español al bytecode queda como trabajo futuro; no se debe considerar completo el compilador de Ariño.

@@ -1,28 +1,86 @@
-name: lexer-ci
+name: lexer-and-arino-il-ci
 
 on:
   push:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test:
+    name: Verify native binaries and Ariño IL v1
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Verify native x86-64 ELF files
         run: |
-          file libarino_lexer.so
-          file arino_lexer_tests
+          set -euxo pipefail
           file libarino_lexer.so | grep -F 'ELF 64-bit LSB shared object, x86-64'
           file arino_lexer_tests | grep -F 'ELF 64-bit LSB pie executable, x86-64'
-      - name: Run compiled lexer tests against the shared library
+          file arino_il_vm | grep -F 'ELF 64-bit LSB executable, x86-64'
+          chmod +x arino_il_vm
+      - name: Run lexer tests
         run: ./arino_lexer_tests
-      - name: Publish native binaries
+      - name: Verify and execute valid IL fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          check() {
+            local fixture="$1" expected="$2" actual
+            ./arino_il_vm --verify "$fixture"
+            actual="$(./arino_il_vm --run "$fixture")"
+            printf '%s\n' "$actual"
+            test "$actual" = "$expected"
+          }
+          check arino_il_demo.aril 'RESULT I64(3)'
+          check arino_il_loop.aril 'RESULT I64(10)'
+          check arino_il_stack.aril 'RESULT I64(5)'
+          check arino_il_branch.aril 'RESULT I64(1)'
+          check arino_il_float.aril 'RESULT I64(1)'
+          check arino_il_constants.aril 'RESULT I64(84)'
+          check arino_il_f64_imm.aril 'RESULT F64(4)'
+          check arino_il_div_i64.aril 'RESULT I64(5)'
+          ./arino_il_vm --disasm arino_il_demo.aril | grep -F 'ADD_I64'
+          ./arino_il_vm --trace arino_il_demo.aril | grep -F 'RESULT I64(3)'
+      - name: Reject malformed IL fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          for fixture in arino_il_bad_jump.aril arino_il_bad_opcode.aril arino_il_truncated.aril; do
+            if ./arino_il_vm --verify "$fixture"; then
+              echo "expected verifier rejection: $fixture" >&2
+              exit 1
+            fi
+          done
+      - name: Check expected runtime traps and instruction limit
+        shell: bash
+        run: |
+          set -euo pipefail
+          expect_trap() {
+            local fixture="$1" expected="$2"; shift 2
+            local output
+            if output="$(./arino_il_vm "$@" "$fixture" 2>&1)"; then
+              echo "expected runtime trap: $fixture" >&2
+              exit 1
+            fi
+            printf '%s\n' "$output"
+            grep -F "$expected" <<<"$output"
+          }
+          expect_trap arino_il_div0.aril 'division by zero' --run
+          expect_trap arino_il_underflow.aril 'requires two stack values' --run
+          expect_trap arino_il_type_error.aril 'type mismatch' --run
+          expect_trap arino_il_overflow.aril 'addition overflow' --run
+          expect_trap arino_il_infinite.aril 'instruction limit exceeded' --max-steps 20
+      - name: Publish lexer and Ariño IL artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: arino-lexer-linux-x86_64
+          name: arino-native-and-il-v1-linux-x86_64
           path: |
             libarino_lexer.so
             arino_lexer_tests
+            arino_il_vm
+            arino_il_*.aril
           if-no-files-found: error

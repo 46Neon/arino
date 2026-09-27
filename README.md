@@ -1,33 +1,31 @@
 # Ariño — lexer nativo binario
 
-Prototipo de lexer de frases en español distribuido como binarios ELF nativos para Linux x86-64 (System V). El repositorio conserva `libarino_lexer.so`, su ejecutable de pruebas `arino_lexer_tests` y `arino_lexer.h`, que define la interfaz pública; no conserva la implementación C ni ensamblador.
+Lexer inicial de frases en español. La implementación y el ejecutable de pruebas se distribuyen como binarios ELF nativos, no como código C o ensamblador.
 
-## Binarios y compatibilidad
+## Binarios
 
-- `libarino_lexer.so`: biblioteca ELF x86-64 de 64 bits, compartida y enlazada dinámicamente.
-- `arino_lexer_tests`: ejecutable ELF x86-64 que carga la biblioteca desde su propio directorio (`$ORIGIN`).
-- Los binarios se prueban en GitHub Actions sobre `ubuntu-latest`. Requieren Linux x86-64 y un entorno compatible con GNU/Linux; no son código fuente portable ni se pueden reconstruir desde este repositorio.
-- GitHub Actions ejecuta el binario de pruebas y publica ambos archivos como artefacto `arino-lexer-linux-x86_64`.
+- `libarino_lexer.so`: biblioteca compartida Linux x86-64 (System V ABI).
+- `arino_lexer_tests`: ejecutable de pruebas nativo que carga la biblioteca desde su propio directorio.
+- GitHub Actions ejecuta las pruebas y publica ambos binarios en cada build exitoso.
 
-## Interfaz
+Los binarios son específicos de Linux x86-64 y de un entorno GNU/Linux compatible. El repositorio no conserva fuentes ni permite reconstruirlos. No son bytecode portable.
 
-La declaración ABI está en `arino_lexer.h`. La función exportada `arino_lex` recibe un búfer de entrada, su longitud en bytes, un arreglo de salida preasignado de tokens, su capacidad y un estado opcional. Devuelve la cantidad de tokens producidos. No asigna memoria: cada lexema es una vista (puntero y longitud) al búfer de entrada del llamador. El llamador debe mantener vivo ese búfer mientras use los tokens.
+## Interfaz binaria
 
-Cada token expone tipo, offset de bytes, hash FNV-1a de 32 bits para lexemas de palabra y, para números, el patrón de bits IEEE-754 binary64. `ArinoStatus` informa el código de error y el offset del byte; en éxito, el offset es la longitud de entrada. Los enums y la disposición de estructuras son los definidos en el header y forman parte de la ABI.
+La biblioteca exporta `arino_lex`. Recibe un puntero al búfer de entrada, su longitud en bytes, un puntero a un arreglo de salida preasignado, su capacidad y un puntero opcional al estado. Devuelve la cantidad de tokens producidos. No reserva memoria: cada lexema es una vista al búfer original, que debe seguir vivo mientras se usen los tokens.
+
+En la ABI Linux x86-64, cada token ocupa 40 bytes y se alinea a 8 bytes: puntero al lexema en el desplazamiento 0; longitud en bytes en 8; offset en la entrada en 16; tipo en 24; hash en 28; bits IEEE-754 binary64 en 32. El estado ocupa 16 bytes: código de error en 0 y offset de error en 8. Los punteros y `size_t` son de 64 bits; los campos de tipo y hash son de 32 bits.
+
+Tipos de token: 0 palabra, 1 verbo de acción, 2 entidad de IA, 3 operador lógico, 4 número, 5 símbolo. Estados: 0 éxito, 1 argumento inválido, 2 número mal formado, 3 número fuera de rango, 4 salida insuficiente. En éxito, el offset de estado es la longitud de entrada; en error, identifica el byte problemático.
 
 ## Comportamiento léxico
 
-- Tabla de clases de 256 entradas y DFA con matrices de estados/acciones.
-- Bytes UTF-8 conservados dentro del lexema; no valida secuencias UTF-8 malformadas ni normaliza mayúsculas/minúsculas.
-- Verbos-Acción: `entrenar`, `entrena`, `clasificar`, `clasifica`, `predecir`, `predice`.
-- Entidades-IA: `modelo`, `datos`, `tensor`, `capa`.
-- Operadores-Lógicos: `si`, `entonces`, `mientras`.
-- Las demás palabras son `ARINO_TOKEN_WORD`; los signos son `ARINO_TOKEN_SYMBOL`. Se descartan espacios y controles ASCII.
-- Números decimales con signo opcional; se reconoce punto decimal, no exponentes como `1e-3`.
+Usa clases de byte y una tabla DFA de transiciones/acciones. Conserva los bytes UTF-8 dentro del lexema, pero no valida secuencias malformadas ni normaliza mayúsculas.
 
-## Límites
+- Verbos de acción: `entrenar`, `entrena`, `clasificar`, `clasifica`, `predecir`, `predice`.
+- Entidades de IA: `modelo`, `datos`, `tensor`, `capa`.
+- Operadores lógicos: `si`, `entonces`, `mientras`.
+- Las demás palabras se clasifican como palabra; signos como símbolo. Se descartan espacios y controles ASCII.
+- Reconoce números decimales con signo opcional y punto decimal, y conserva su patrón binary64. No reconoce exponentes como `1e-3`.
 
-- Es un lexer, no un parser: informa errores léxicos con offset; la gramática corresponde a una capa posterior.
-- El lexer no elige la dirección de memoria de un tensor. Devuelve bits binary64; un asignador/optimizador posterior debe ubicar el valor y asociar su dirección.
-- Calcular FNV-1a cuesta O(n) en la longitud de la palabra; la búsqueda posterior en la tabla fija de palabras es O(1) acotado.
-- El formato es específico de Linux x86-64; no debe confundirse con bytecode portable ni código fuente reconstruible.
+El lexer no es un parser. Tampoco asigna direcciones de memoria a tensores: esa tarea corresponde a una capa posterior.

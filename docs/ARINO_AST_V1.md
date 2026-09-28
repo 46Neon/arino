@@ -2,7 +2,7 @@
 
 ## Estado
 
-El repositorio incorpora `arino_ast_compiler`, un ejecutable nativo Linux x86-64 que usa la biblioteca binaria existente `libarino_lexer.so`. Implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_il_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. La cabecera binaria continúa identificando el formato ARIL v1, sin cambiar el bytecode.
+El repositorio incorpora `arino_ast_compiler`, un ejecutable nativo Linux x86-64 que usa la biblioteca binaria existente `libarino_lexer.so`. Implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_il_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. Las nuevas compilaciones llevan firma `ARINO` y formato IL v2; la VM sigue aceptando IL v1 (`ARIL`) como formato heredado.
 
 La sintaxis pública sigue en español. Esta versión implementa el subconjunto de expresiones aritméticas y asignaciones descrito aquí; no es todavía un parser de todas las construcciones que Ariño podría incorporar.
 
@@ -76,9 +76,9 @@ La primera asignación declara implícitamente una variable y fija su tipo; lect
 
 Tras la validación semántica, el optimizador visita el árbol en postorden. Si los dos hijos de ADD/SUB/MUL/DIV son literales del mismo tipo, evalúa la operación durante la compilación y reemplaza el nodo por un único literal, conservando el span humano y marcando el bit de plegado. Variables nunca se pliegan. Para I64, se pliega solo si no hay overflow; una división por cero tampoco se pliega. Esos casos quedan como operaciones IL para que la VM informe la trampa correspondiente. F64 conserva semántica IEEE-754.
 
-## 5. Emisión postorden hacia Ariño IL v1
+## 5. Emisión postorden hacia Ariño IL v2
 
-La emisión recorre expresiones en postorden: primero hijo izquierdo, luego hijo derecho y luego la instrucción. Las instrucciones usan exactamente el formato de `docs/ARINO_IL_V1.md`; no se define una segunda ISA.
+La emisión recorre expresiones en postorden: primero hijo izquierdo, luego hijo derecho y luego la instrucción. Las instrucciones usan exactamente el formato de `docs/ARINO_IL_V2.md`; no se define una segunda ISA.
 
 | Nodo AST | Emisión IL |
 |---|---|
@@ -90,7 +90,7 @@ La emisión recorre expresiones en postorden: primero hijo izquierdo, luego hijo
 | ADD/SUB/MUL/DIV F64 | emitir hijos y `ADD_F64` / `SUB_F64` / `MUL_F64` / `DIV_F64` |
 | PROGRAM | emitir sentencias; descartar con `POP` los resultados de expresiones no finales; terminar con `HALT` |
 
-El opcode de la VM ocupa un byte y cada formato de instrucción tiene operandos de ancho fijo; el tamaño total varía según el opcode (por ejemplo, `PUSH_I64` mide 9 bytes y `ADD_I64` 1), tal como requiere el bytecode v1 existente. El emisor calcula la profundidad máxima real de la pila y escribe `local_count`, `max_stack` y `entry_ip` en el encabezado ARIL. El pool de constantes queda disponible para futuras optimizaciones; v1 de este frontend emite literales inmediatos.
+El opcode de la VM ocupa un byte y cada formato de instrucción tiene operandos de ancho fijo; el tamaño total varía según el opcode (por ejemplo, `PUSH_I64` mide 9 bytes y `ADD_I64` 1), tal como requiere el bytecode v2 existente. El emisor calcula la profundidad máxima real de la pila y escribe `local_count`, `max_stack` y `entry_ip` en el encabezado ARINO v2. El pool de constantes queda disponible para futuras optimizaciones; v1 de este frontend emite literales inmediatos.
 
 ## 6. Uso y depuración
 
@@ -111,4 +111,4 @@ printf '%s' 'sumar 2 y 3' > suma.ari
 
 ## Límites de v1
 
-El compilador cubre expresiones I64/F64, paréntesis, las familias aritméticas indicadas, asignaciones y un scope de módulo. Todavía no genera condiciones, bucles, funciones, llamadas, tipos de tensor/IA ni bloques anidados, aunque la VM IL v1 ya tiene algunas instrucciones de control de flujo. El parser/AST es funcional para este subconjunto y está preparado para ampliar nodos y scopes; no debe confundirse con el compilador integral de todo Ariño. El repositorio distribuye el compilador como binario y no guarda fuentes C o ensamblador.
+El compilador cubre expresiones I64/F64, paréntesis, las familias aritméticas indicadas, asignaciones y un scope de módulo. Todavía no genera condiciones, bucles, funciones, llamadas, tipos de tensor/IA ni bloques anidados, aunque la VM IL v2 ya tiene algunas instrucciones de control de flujo. El parser/AST es funcional para este subconjunto y está preparado para ampliar nodos y scopes; no debe confundirse con el compilador integral de todo Ariño. El repositorio distribuye el compilador como binario y no guarda fuentes C o ensamblador.

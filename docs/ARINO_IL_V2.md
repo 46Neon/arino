@@ -1,12 +1,10 @@
-# Ariño IL v1.0 — contrato binario heredado
-
-> **Compatibilidad:** esta especificación describe el formato anterior, con magic `ARIL`. Las nuevas compilaciones usan `ARINO` v2; la VM sigue leyendo v1. Consulta [ARINO_IL_V2.md](ARINO_IL_V2.md).
+# Ariño IL v2.0 — contrato binario
 
 ## Estado y compatibilidad de sintaxis
 
 Esta especificación define el formato del bytecode y el contrato de ejecución de la VM. Es una capa interna: **no cambia la sintaxis visible en español de Ariño**. El flujo previsto es fuente Ariño en español → lexer/parser → AST → IL binario.
 
-Los archivos de esta especificación tienen encabezado v1 `ARIL` y se conservan como formato legado. La VM los acepta por compatibilidad, aunque el nombre del archivo sea `.arino` o `.aril`. Las nuevas compilaciones emiten `ARINO` v2; su cabecera y contrato están en [ARINO_IL_V2.md](ARINO_IL_V2.md). El bytecode v1 tampoco es código máquina de CPU: ambos formatos los ejecuta la VM nativa `arino_il_vm`.
+El formato actual usa archivos `.arino` con firma ASCII de cinco bytes `ARINO` y versión 2.0. La VM también lee el formato v1 con firma `ARIL`, incluso si el archivo tiene el sufijo heredado `.aril`. Ambos son bytecode para la VM nativa Linux x86-64, no instrucciones nativas de la CPU. La IL sigue siendo interna y no altera la sintaxis pública en español.
 
 ## 1. ISA stack-based
 
@@ -41,29 +39,30 @@ Cada instrucción comienza con un opcode único de un byte. Los operandos multib
 
 `JMP`, `JZ` y `JNZ` miden el desplazamiento desde el byte posterior al operando. `JZ/JNZ` aceptan BOOL únicamente. `LOAD/STORE` acceden a slots de la trama local, no a punteros arbitrarios. El entero usa complemento a dos. Desbordamiento I64, división por cero, pila insuficiente, tipos incompatibles y slot no válido producen una trampa con IP y motivo. Comparaciones F64 siguen IEEE-754: NaN no es igual a nada y no satisface LT.
 
-## 2. Archivo `.arino` (cabecera `ARIL` v1)
+## 2. Archivo `.arino` (firma `ARINO`, v2)
 
-Todos los offsets son desde el principio del archivo. Versión 1 usa campos little-endian y offsets/tamaños de 32 bits.
+Todos los offsets son desde el principio del archivo. IL v2 usa campos little-endian y offsets/tamaños de 32 bits. La firma ASCII `ARINO` tiene cinco bytes.
 
 | Offset | Tamaño | Campo |
 |---:|---:|---|
-| 0 | 4 | Magic ASCII `ARIL` |
-| 4 | 2 | Versión mayor: 1 |
-| 6 | 2 | Versión menor: 0 |
-| 8 | 2 | Tamaño del encabezado: 40 |
-| 10 | 2 | Flags: cero en v1 |
-| 12 | 4 | Offset de constantes |
-| 16 | 4 | Tamaño de constantes |
-| 20 | 4 | Cantidad de constantes |
-| 24 | 4 | Offset del código |
-| 28 | 4 | Tamaño del código |
-| 32 | 2 | Cantidad de slots locales |
-| 34 | 2 | Máximo de valores en la pila |
-| 36 | 4 | IP inicial, relativo al segmento de código |
+| 0 | 5 | Firma ASCII `ARINO` |
+| 5 | 2 | Versión mayor: 2 |
+| 7 | 2 | Versión menor: 0 |
+| 9 | 2 | Tamaño del encabezado: 48 |
+| 11 | 2 | Flags: cero en v2 |
+| 13 | 4 | Offset de constantes |
+| 17 | 4 | Tamaño de constantes |
+| 21 | 4 | Cantidad de constantes |
+| 25 | 4 | Offset del código |
+| 29 | 4 | Tamaño del código |
+| 33 | 2 | Cantidad de slots locales |
+| 35 | 2 | Máximo de valores en la pila |
+| 37 | 4 | IP inicial, relativo al segmento de código |
+| 41 | 7 | Reservado: cero |
 
 Cada constante tiene etiqueta u8 (01 I64, 02 F64), flags u8 en cero, reservado u16 en cero, longitud u32, payload y padding cero hasta el siguiente límite de 8 bytes. I64/F64 usan 8 bytes. El código contiene instrucciones consecutivas. Las secciones de constantes y código comienzan en offsets alineados a 8 bytes; **no hay padding entre instrucciones**. Así se conserva un fetch secuencial compacto. La VM decodifica operandos byte a byte, sin presuponer alineación del inmediato.
 
-El verificador rechaza magic/versión/flags inválidos, secciones fuera del archivo, opcode desconocido, inmediato truncado, índice fuera de rango o destino de salto que no sea inicio de instrucción. En v1, un archivo contiene una función de entrada; llamadas y funciones múltiples quedan para una extensión posterior.
+El verificador rechaza firma/versión/flags/reservados inválidos, secciones fuera del archivo, opcode desconocido, inmediato truncado, índice fuera de rango o destino de salto que no sea inicio de instrucción. Como compatibilidad, también acepta el encabezado v1 de 40 bytes con firma `ARIL`; las nuevas compilaciones siempre escriben v2. Un archivo contiene una función de entrada; llamadas y funciones múltiples quedan para una extensión posterior.
 
 ## 3. Máquina virtual
 
@@ -104,7 +103,7 @@ La VM proporciona `--disasm` (offset de código, bytes, mnemonic y operandos) y 
 
 ## Fixture binario
 
-La fixture heredada `arino_il_v1_legacy.arino` tiene encabezado ARIL v1, sin constantes, `local_count=1`, `max_stack=2`, código de 36 bytes. Calcula 6+7, guarda/carga el slot 0, resta 10 y termina con I64 3. SHA-256: `ec2f9a207b69501577cf7eef9d60f6ce60ad2a1cbbc4f5785904600ff7d61f7a`.
+La fixture `arino_il_demo.arino` usa firma ARINO v2, sin constantes, `local_count=1`, `max_stack=2`, código de 36 bytes. Calcula 6+7, guarda/carga el slot 0, resta 10 y termina con I64 3. SHA-256: `993dde07620905c987062deb4d4f14e4013e44d5144416a5714e9c72ed46993d`.
 
 ## VM y pruebas disponibles
 
@@ -118,8 +117,8 @@ El ejecutable `arino_il_vm` ofrece (tras descargarlo o clonarlo, ejecutar `chmod
 ./arino_il_vm --max-steps 20 archivo.arino
 ```
 
-El verificador comprueba encabezado/secciones, opcodes e inmediatos, índices y destinos de salto en fronteras de instrucción. La VM ejecuta la ISA documentada y detecta trampas como overflow I64, división por cero, underflow, tipos incompatibles, locals no inicializados y límite de instrucciones. GitHub Actions verifica el formato ELF x86-64, verifica/ejecuta fixtures válidas con resultados exactos, confirma rechazos y traps, y publica el VM junto con las fixtures `.arino` como artefacto y comprueba una ruta temporal con sufijo `.aril` heredado.
+El verificador comprueba encabezado v2 o v1 legado, secciones, opcodes e inmediatos, índices y destinos de salto en fronteras de instrucción. La VM ejecuta la ISA documentada y detecta trampas como overflow I64, división por cero, underflow, tipos incompatibles, locals no inicializados y límite de instrucciones. GitHub Actions verifica el formato ELF x86-64, verifica/ejecuta fixtures válidas con resultados exactos, confirma rechazos y traps, y publica el VM junto con las fixtures `.arino` como artefacto y comprueba una ruta temporal con sufijo `.aril` heredado.
 
-La fixture de compatibilidad v1 es `arino_il_v1_legacy.arino`; conserva magic `ARIL` y resultado I64(3). Las fixtures y pruebas del formato actual se documentan en [ARINO_IL_V2.md](ARINO_IL_V2.md).
+Fixtures `.arino` válidas: `arino_il_demo.arino` (resultado 3 con LOAD/STORE), `arino_il_loop.arino` (bucle y ramas, 10), `arino_il_stack.arino` (DUP/SWAP/POP, 5), `arino_il_branch.arino` (EQ_I64/JNZ, 1), `arino_il_float.arino` (constantes y aritmética/comparaciones F64), `arino_il_constants.arino` (pool I64, 84), `arino_il_f64_imm.arino` (PUSH_F64, 4) y `arino_il_div_i64.arino` (20/4, 5). Las fixtures negativas `.arino` comprueban saltos inválidos, opcode desconocido, inmediato truncado, división por cero, underflow, tipos incorrectos, overflow y agotamiento del límite de pasos.
 
 **Límite:** el frontend Ariño→AST→IL existe y se valida en CI solo para el subconjunto de aritmética y asignaciones definido en `ARINO_AST_V1.md`. No analiza ni emite bloques, condiciones, bucles, funciones/llamadas, scopes anidados o sintaxis de tensores/IA. El flujo no equivale a un compilador integral de Ariño.

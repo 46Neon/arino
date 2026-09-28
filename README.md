@@ -12,7 +12,7 @@ Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se m
 
 `arino_ast_compiler` consume el lexer y compila expresiones aritméticas I64/F64 y asignaciones separadas por punto y coma. Reconoce las formas visibles en español —por ejemplo, `sumar 2 y 3`, `2 más 3` y `dividir 8 con 2`—, conserva spans del fuente, valida tipos y variables, pliega expresiones constantes seguras y emite Ariño IL v1. Incluye un volcado AST y un modo de análisis sin emisión. La [especificación AST v1](docs/ARINO_AST_V1.md) documenta nodos, alias, gramática admitida y límites.
 
-La IL es interna: esta etapa no traduce ni reemplaza la sintaxis pública en español. `arino_il_vm` es una VM/verificador/desensamblador nativa Linux x86-64; los archivos `.aril` son bytecode de la VM, no código máquina de la CPU. Consulta el [contrato IL v1](docs/ARINO_IL_V1.md).
+La IL es interna: esta etapa no traduce ni reemplaza la sintaxis pública en español. `arino_il_vm` es una VM/verificador/desensamblador nativa Linux x86-64; los archivos nuevos `.arino` son bytecode de la VM, no código máquina de la CPU; la VM también acepta archivos `.aril` heredados. Consulta el [contrato IL v1](docs/ARINO_IL_V1.md).
 
 Uso desde la raíz del repositorio:
 
@@ -21,14 +21,14 @@ chmod +x arino_ast_compiler arino_il_vm
 printf '%s' 'sumar 2 y 3' > suma.ari
 ./arino_ast_compiler --ast suma.ari
 ./arino_ast_compiler --check suma.ari
-./arino_ast_compiler --compile suma.ari suma.aril
-./arino_il_vm --verify suma.aril
-./arino_il_vm --run suma.aril
+./arino_ast_compiler --compile suma.ari suma.arino
+./arino_il_vm --verify suma.arino
+./arino_il_vm --run suma.arino
 ```
 
 ## VM IL v1
 
-La VM valida encabezado y bytecode (opcodes, operandos, índices y destinos de salto) y ejecuta operaciones I64/F64, comparaciones, saltos y slots locales; informa trampas de ejecución, incluidos overflow, división por cero, tipos incompatibles, underflow y agotamiento del límite de instrucciones. Las fixtures `.aril` cubren resultados correctos, control de flujo, constantes, operaciones de pila, aritmética/comparación F64, verificación negativa y traps.
+La VM valida encabezado y bytecode (opcodes, operandos, índices y destinos de salto) y ejecuta operaciones I64/F64, comparaciones, saltos y slots locales; informa trampas de ejecución, incluidos overflow, división por cero, tipos incompatibles, underflow y agotamiento del límite de instrucciones. Las fixtures binarias `.aril` heredadas se conservan para compatibilidad y cubren resultados correctos, control de flujo, constantes, operaciones de pila, aritmética/comparación F64, verificación negativa y traps.
 
 CI valida los ELF x86-64, ejecuta las pruebas del lexer, conserva las pruebas IL existentes y verifica compilación/emisión/ejecución del subconjunto AST, errores semánticos y plegado de constantes. También publica los binarios y fixtures como artefacto descargable.
 

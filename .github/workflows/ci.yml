@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   test:
-    name: Verify native binaries and Ariño frontend/IL v1
+    name: Verify native binaries and Ariño frontend/IL v2
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -35,7 +35,7 @@ jobs:
             local name="$1" source="$2" expected="$3"
             printf '%s' "$source" > "$tmp/$name.ari"
             ./arino_ast_compiler --compile "$tmp/$name.ari" "$tmp/$name.arino"
-            ./arino_il_vm --verify "$tmp/$name.arino"
+            ./arino_il_vm --verify "$tmp/$name.arino" | grep -F "OK ARINO 2.0"
             local actual
             actual="$(./arino_il_vm --run "$tmp/$name.arino")"
             printf '%s => %s\n' "$source" "$actual"
@@ -92,8 +92,9 @@ jobs:
         run: |
           set -euo pipefail
           check() {
-            local fixture="$1" expected="$2" actual
-            ./arino_il_vm --verify "$fixture"
+            local fixture="$1" expected="$2" actual verified
+            verified="$(./arino_il_vm --verify "$fixture")"
+            grep -F "OK ARINO 2.0" <<<"$verified"
             actual="$(./arino_il_vm --run "$fixture")"
             printf '%s\n' "$actual"
             test "$actual" = "$expected"
@@ -108,10 +109,13 @@ jobs:
           check arino_il_div_i64.arino 'RESULT I64(5)'
           ./arino_il_vm --disasm arino_il_demo.arino | grep -F 'ADD_I64'
           ./arino_il_vm --trace arino_il_demo.arino | grep -F 'RESULT I64(3)'
-          # The suffix is only a naming convention: legacy .aril paths remain readable.
+          # Legacy format v1 stays readable, regardless of the filename suffix.
+          ./arino_il_vm --verify arino_il_v1_legacy.arino | grep -F 'OK ARIL 1.0'
+          ./arino_il_vm --run arino_il_v1_legacy.arino | grep -F 'RESULT I64(3)'
           legacy="${RUNNER_TEMP:-/tmp}/arino-legacy-compat.aril"
-          cp arino_il_demo.arino "$legacy"
-          check "$legacy" 'RESULT I64(3)'
+          cp arino_il_v1_legacy.arino "$legacy"
+          ./arino_il_vm --verify "$legacy" | grep -F 'OK ARIL 1.0'
+          ./arino_il_vm --run "$legacy" | grep -F 'RESULT I64(3)'
       - name: Reject malformed IL fixtures
         shell: bash
         run: |
@@ -144,7 +148,7 @@ jobs:
       - name: Publish Ariño native and IL artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: arino-native-and-il-v1-linux-x86_64
+          name: arino-native-and-il-v2-linux-x86_64
           path: |
             libarino_lexer.so
             arino_lexer_tests

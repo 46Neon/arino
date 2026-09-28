@@ -1,6 +1,6 @@
 # Ariño — frontend AST e IL en binarios nativos
 
-Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se mantiene en español. El repositorio distribuye artefactos binarios nativos; no conserva fuentes C ni ensamblador de las implementaciones nativas.
+Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se mantiene en español. El repositorio distribuye artefactos nativos compilados sin fuentes de implementación C ni ensamblador. El punto de entrada ejecutable `arino_ast_compiler` es un wrapper integrado que aplica una comprobación estática adicional antes de delegar en `arino_ast_compiler_core`, el compilador nativo interno; no introduce un analizador de uso separado.
 
 ## Lexer
 

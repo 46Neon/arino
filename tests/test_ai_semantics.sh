@@ -34,7 +34,7 @@ reject 'datos x : tensor[8,3]; modelo M entrada tensor[3] salida tensor[2]; capa
 reject 'entrenar M;' "se esperaba 'con'" incomplete-action
 reject 'entrenar con x;' 'se esperaba un identificador explícito' missing-model
 
-# AI words remain usable as scalar identifiers outside declarations/actions.
+# AI words remain usable as scalar identifiers outside the AI declaration/action grammar.
 printf '%s' 'modelo = 7; modelo más 1' >"$tmp/scalar-name.ari"
 "$compiler" --compile "$tmp/scalar-name.ari" "$tmp/scalar-name.arino" >/dev/null
 test "$("$root/arino_vm" --run "$tmp/scalar-name.arino")" = 'RESULT I64(8)'
@@ -42,13 +42,15 @@ printf '%s' 'entrenar = 7; entrenar más 1' >"$tmp/scalar-action-name.ari"
 "$compiler" --compile "$tmp/scalar-action-name.ari" "$tmp/scalar-action-name.arino" >/dev/null
 test "$("$root/arino_vm" --run "$tmp/scalar-action-name.arino")" = 'RESULT I64(8)'
 
-# Semantic failures and unsupported backend must never leave partial bytecode.
+# Semantic analysis must succeed before the backend capability error, and must
+# not create a partial output artifact.
 printf '%s' "$valid" >"$tmp/compile.ari"
 if "$compiler" --compile "$tmp/compile.ari" "$tmp/partial.arino" >"$tmp/compile.log" 2>&1; then
   echo 'AI compile unexpectedly succeeded without tensor VM opcodes' >&2; exit 1
 fi
 grep -F 'no se generó archivo .arino' "$tmp/compile.log"
 test ! -e "$tmp/partial.arino"
+# A semantic failure also leaves no output.
 printf '%s' 'entrenar M con x;' >"$tmp/fail.ari"
 if "$compiler" --compile "$tmp/fail.ari" "$tmp/failed.arino" >"$tmp/fail.log" 2>&1; then exit 1; fi
 test ! -e "$tmp/failed.arino"

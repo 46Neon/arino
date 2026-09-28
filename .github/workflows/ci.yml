@@ -22,7 +22,7 @@ jobs:
           file arino_lexer_tests | grep -F 'ELF 64-bit LSB pie executable, x86-64'
           file arino_vm | grep -F 'ELF 64-bit LSB executable, x86-64'
           file arino_ast_compiler | grep -F 'ELF 64-bit LSB executable, x86-64'
-          chmod +x arino_vm arino_ast_compiler
+          chmod +x arino_vm arino_ast_compiler arino_ast_compiler_scalar
       - name: Run lexer tests
         run: ./arino_lexer_tests
       - name: Test AST, Spanish aliases, semantics and emitted IL
@@ -87,6 +87,10 @@ jobs:
           expect_reject 'x más 2'
           expect_reject '1 más 2.0'
           expect_reject 'x = 3; x = 2.0'
+      - name: Validate Spanish AI grammar, typed HIR and backend rejection
+        run: bash tests/test_ai_semantics.sh
+      - name: Verify preserved scalar compiler fallback binary
+        run: file arino_ast_compiler_scalar | grep -F 'ELF 64-bit LSB executable, x86-64'
       - name: Verify and execute valid IL fixtures
         shell: bash
         run: |
@@ -153,6 +157,7 @@ jobs:
             libarino_lexer.so
             arino_lexer_tests
             arino_ast_compiler
+            arino_ast_compiler_scalar
             arino_vm
             arino_il_*.arino
             arino_*.arino

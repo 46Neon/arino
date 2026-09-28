@@ -20,9 +20,9 @@ jobs:
           set -euxo pipefail
           file libarino_lexer.so | grep -F 'ELF 64-bit LSB shared object, x86-64'
           file arino_lexer_tests | grep -F 'ELF 64-bit LSB pie executable, x86-64'
-          file arino_il_vm | grep -F 'ELF 64-bit LSB executable, x86-64'
+          file arino_vm | grep -F 'ELF 64-bit LSB executable, x86-64'
           file arino_ast_compiler | grep -F 'ELF 64-bit LSB executable, x86-64'
-          chmod +x arino_il_vm arino_ast_compiler
+          chmod +x arino_vm arino_ast_compiler
       - name: Run lexer tests
         run: ./arino_lexer_tests
       - name: Test AST, Spanish aliases, semantics and emitted IL
@@ -35,9 +35,9 @@ jobs:
             local name="$1" source="$2" expected="$3"
             printf '%s' "$source" > "$tmp/$name.ari"
             ./arino_ast_compiler --compile "$tmp/$name.ari" "$tmp/$name.arino"
-            ./arino_il_vm --verify "$tmp/$name.arino" | grep -F "OK ARINO 2.0"
+            ./arino_vm --verify "$tmp/$name.arino" | grep -F "OK ARINO 2.0"
             local actual
-            actual="$(./arino_il_vm --run "$tmp/$name.arino")"
+            actual="$(./arino_vm --run "$tmp/$name.arino")"
             printf '%s => %s\n' "$source" "$actual"
             test "$actual" = "$expected"
           }
@@ -66,11 +66,11 @@ jobs:
 
           compile_run locals 'x = 7; y = x por 2; y menos 3' 'RESULT I64(11)'
           ./arino_ast_compiler --compile "$tmp/locals.ari" "$tmp/locals.arino" | grep -F 'locals=2'
-          ./arino_il_vm --disasm "$tmp/locals.arino" | grep -F 'STORE        0'
-          ./arino_il_vm --disasm "$tmp/locals.arino" | grep -F 'STORE        1'
+          ./arino_vm --disasm "$tmp/locals.arino" | grep -F 'STORE        0'
+          ./arino_vm --disasm "$tmp/locals.arino" | grep -F 'STORE        1'
           compile_run f64 '0.5 más 1.25' 'RESULT F64(1.75)'
           compile_run folded '(2 más 3) por 4' 'RESULT I64(20)'
-          disasm="$(./arino_il_vm --disasm "$tmp/folded.arino")"
+          disasm="$(./arino_vm --disasm "$tmp/folded.arino")"
           grep -F 'PUSH_I64     20' <<< "$disasm"
           test "$(grep -c 'PUSH_I64' <<< "$disasm")" -eq 1
           test "$(grep -c 'HALT' <<< "$disasm")" -eq 1
@@ -93,9 +93,9 @@ jobs:
           set -euo pipefail
           check() {
             local fixture="$1" expected="$2" actual verified
-            verified="$(./arino_il_vm --verify "$fixture")"
+            verified="$(./arino_vm --verify "$fixture")"
             grep -F "OK ARINO 2.0" <<<"$verified"
-            actual="$(./arino_il_vm --run "$fixture")"
+            actual="$(./arino_vm --run "$fixture")"
             printf '%s\n' "$actual"
             test "$actual" = "$expected"
           }
@@ -107,21 +107,21 @@ jobs:
           check arino_il_constants.arino 'RESULT I64(84)'
           check arino_il_f64_imm.arino 'RESULT F64(4)'
           check arino_il_div_i64.arino 'RESULT I64(5)'
-          ./arino_il_vm --disasm arino_il_demo.arino | grep -F 'ADD_I64'
-          ./arino_il_vm --trace arino_il_demo.arino | grep -F 'RESULT I64(3)'
+          ./arino_vm --disasm arino_il_demo.arino | grep -F 'ADD_I64'
+          ./arino_vm --trace arino_il_demo.arino | grep -F 'RESULT I64(3)'
           # Legacy format v1 stays readable, regardless of the filename suffix.
-          ./arino_il_vm --verify arino_il_v1_legacy.arino | grep -F 'OK ARIL 1.0'
-          ./arino_il_vm --run arino_il_v1_legacy.arino | grep -F 'RESULT I64(3)'
+          ./arino_vm --verify arino_il_v1_legacy.arino | grep -F 'OK ARIL 1.0'
+          ./arino_vm --run arino_il_v1_legacy.arino | grep -F 'RESULT I64(3)'
           legacy="${RUNNER_TEMP:-/tmp}/arino-legacy-compat.aril"
           cp arino_il_v1_legacy.arino "$legacy"
-          ./arino_il_vm --verify "$legacy" | grep -F 'OK ARIL 1.0'
-          ./arino_il_vm --run "$legacy" | grep -F 'RESULT I64(3)'
+          ./arino_vm --verify "$legacy" | grep -F 'OK ARIL 1.0'
+          ./arino_vm --run "$legacy" | grep -F 'RESULT I64(3)'
       - name: Reject malformed IL fixtures
         shell: bash
         run: |
           set -euo pipefail
           for fixture in arino_il_bad_jump.arino arino_il_bad_opcode.arino arino_il_truncated.arino; do
-            if ./arino_il_vm --verify "$fixture"; then
+            if ./arino_vm --verify "$fixture"; then
               echo "expected verifier rejection: $fixture" >&2
               exit 1
             fi
@@ -133,7 +133,7 @@ jobs:
           expect_trap() {
             local fixture="$1" expected="$2"; shift 2
             local output
-            if output="$(./arino_il_vm "$@" "$fixture" 2>&1)"; then
+            if output="$(./arino_vm "$@" "$fixture" 2>&1)"; then
               echo "expected runtime trap: $fixture" >&2
               exit 1
             fi
@@ -148,12 +148,12 @@ jobs:
       - name: Publish Ariño native and IL artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: arino-native-and-il-v2-linux-x86_64
+          name: arino-vm-native-and-il-v2-linux-x86_64
           path: |
             libarino_lexer.so
             arino_lexer_tests
             arino_ast_compiler
-            arino_il_vm
+            arino_vm
             arino_il_*.arino
             arino_*.arino
           if-no-files-found: error

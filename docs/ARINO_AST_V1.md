@@ -2,7 +2,7 @@
 
 ## Estado
 
-El repositorio incorpora `arino_ast_compiler`, un ejecutable nativo Linux x86-64 que usa la biblioteca binaria existente `libarino_lexer.so`. Implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_il_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. Las nuevas compilaciones llevan firma `ARINO` y formato IL v2; la VM sigue aceptando IL v1 (`ARIL`) como formato heredado.
+El repositorio incorpora `arino_ast_compiler`, un ejecutable nativo Linux x86-64 que usa la biblioteca binaria existente `libarino_lexer.so`. Implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. Las nuevas compilaciones llevan firma `ARINO` y formato IL v2; la VM sigue aceptando IL v1 (`ARIL`) como formato heredado.
 
 La sintaxis pública sigue en español. Esta versión implementa el subconjunto de expresiones aritméticas y asignaciones descrito aquí; no es todavía un parser de todas las construcciones que Ariño podría incorporar.
 
@@ -97,14 +97,14 @@ El opcode de la VM ocupa un byte y cada formato de instrucción tiene operandos 
 Ejecuta desde la raíz del repositorio, donde está `libarino_lexer.so`:
 
 ```sh
-chmod +x arino_ast_compiler arino_il_vm
+chmod +x arino_ast_compiler arino_vm
 printf '%s' 'sumar 2 y 3' > suma.ari
 ./arino_ast_compiler --ast suma.ari
 ./arino_ast_compiler --check suma.ari
 ./arino_ast_compiler --compile suma.ari suma.arino
-./arino_il_vm --verify suma.arino
-./arino_il_vm --disasm suma.arino
-./arino_il_vm --run suma.arino
+./arino_vm --verify suma.arino
+./arino_vm --disasm suma.arino
+./arino_vm --run suma.arino
 ```
 
 `--ast` imprime opcode binario, tipo, span original, contexto y nodos hijos. `--check` ejecuta análisis semántico sin emitir bytecode. `--compile` valida, pliega constantes y escribe `.arino`; después se puede usar `--verify`, `--disasm`, `--run` o `--trace` del VM. Los errores de sintaxis/tipo/scope incluyen el offset en bytes del fuente.

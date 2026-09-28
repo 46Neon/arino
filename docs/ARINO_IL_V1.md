@@ -6,7 +6,7 @@
 
 Esta especificación define el formato del bytecode y el contrato de ejecución de la VM. Es una capa interna: **no cambia la sintaxis visible en español de Ariño**. El flujo previsto es fuente Ariño en español → lexer/parser → AST → IL binario.
 
-Los archivos de esta especificación tienen encabezado v1 `ARIL` y se conservan como formato legado. La VM los acepta por compatibilidad, aunque el nombre del archivo sea `.arino` o `.aril`. Las nuevas compilaciones emiten `ARINO` v2; su cabecera y contrato están en [ARINO_IL_V2.md](ARINO_IL_V2.md). El bytecode v1 tampoco es código máquina de CPU: ambos formatos los ejecuta la VM nativa `arino_il_vm`.
+Los archivos de esta especificación tienen encabezado v1 `ARIL` y se conservan como formato legado. La VM los acepta por compatibilidad, aunque el nombre del archivo sea `.arino` o `.aril`. Las nuevas compilaciones emiten `ARINO` v2; su cabecera y contrato están en [ARINO_IL_V2.md](ARINO_IL_V2.md). El bytecode v1 tampoco es código máquina de CPU: ambos formatos los ejecuta la VM nativa `arino_vm`.
 
 ## 1. ISA stack-based
 
@@ -108,14 +108,14 @@ La fixture heredada `arino_il_v1_legacy.arino` tiene encabezado ARIL v1, sin con
 
 ## VM y pruebas disponibles
 
-El ejecutable `arino_il_vm` ofrece (tras descargarlo o clonarlo, ejecutar `chmod +x arino_il_vm` para habilitar permisos de ejecución):
+El ejecutable `arino_vm` ofrece (tras descargarlo o clonarlo, ejecutar `chmod +x arino_vm` para habilitar permisos de ejecución):
 
 ```sh
-./arino_il_vm --verify archivo.arino
-./arino_il_vm --disasm archivo.arino
-./arino_il_vm --run archivo.arino
-./arino_il_vm --trace archivo.arino
-./arino_il_vm --max-steps 20 archivo.arino
+./arino_vm --verify archivo.arino
+./arino_vm --disasm archivo.arino
+./arino_vm --run archivo.arino
+./arino_vm --trace archivo.arino
+./arino_vm --max-steps 20 archivo.arino
 ```
 
 El verificador comprueba encabezado/secciones, opcodes e inmediatos, índices y destinos de salto en fronteras de instrucción. La VM ejecuta la ISA documentada y detecta trampas como overflow I64, división por cero, underflow, tipos incompatibles, locals no inicializados y límite de instrucciones. GitHub Actions verifica el formato ELF x86-64, verifica/ejecuta fixtures válidas con resultados exactos, confirma rechazos y traps, y publica el VM junto con las fixtures `.arino` como artefacto y comprueba una ruta temporal con sufijo `.aril` heredado.

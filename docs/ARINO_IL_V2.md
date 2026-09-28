@@ -107,14 +107,14 @@ La fixture `arino_il_demo.arino` usa firma ARINO v2, sin constantes, `local_coun
 
 ## VM y pruebas disponibles
 
-El ejecutable `arino_il_vm` ofrece (tras descargarlo o clonarlo, ejecutar `chmod +x arino_il_vm` para habilitar permisos de ejecución):
+El ejecutable `arino_vm` ofrece (tras descargarlo o clonarlo, ejecutar `chmod +x arino_vm` para habilitar permisos de ejecución):
 
 ```sh
-./arino_il_vm --verify archivo.arino
-./arino_il_vm --disasm archivo.arino
-./arino_il_vm --run archivo.arino
-./arino_il_vm --trace archivo.arino
-./arino_il_vm --max-steps 20 archivo.arino
+./arino_vm --verify archivo.arino
+./arino_vm --disasm archivo.arino
+./arino_vm --run archivo.arino
+./arino_vm --trace archivo.arino
+./arino_vm --max-steps 20 archivo.arino
 ```
 
 El verificador comprueba encabezado v2 o v1 legado, secciones, opcodes e inmediatos, índices y destinos de salto en fronteras de instrucción. La VM ejecuta la ISA documentada y detecta trampas como overflow I64, división por cero, underflow, tipos incompatibles, locals no inicializados y límite de instrucciones. GitHub Actions verifica el formato ELF x86-64, verifica/ejecuta fixtures válidas con resultados exactos, confirma rechazos y traps, y publica el VM junto con las fixtures `.arino` como artefacto y comprueba una ruta temporal con sufijo `.aril` heredado.

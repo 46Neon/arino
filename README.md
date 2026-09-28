@@ -12,18 +12,18 @@ Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se m
 
 `arino_ast_compiler` consume el lexer y compila expresiones aritméticas I64/F64 y asignaciones separadas por punto y coma. Reconoce las formas visibles en español —por ejemplo, `sumar 2 y 3`, `2 más 3` y `dividir 8 con 2`—, conserva spans del fuente, valida tipos y variables, pliega expresiones constantes seguras y emite Ariño IL v2. Incluye un volcado AST y un modo de análisis sin emisión. La [especificación AST v1](docs/ARINO_AST_V1.md) documenta nodos, alias, gramática admitida y límites.
 
-La IL es interna: no sustituye la sintaxis pública en español. `arino_il_vm` es una VM nativa Linux x86-64. El compilador emite bytecode `.arino` con firma de cinco bytes `ARINO` y formato IL v2; ese bytecode no es código máquina de la CPU. La VM mantiene lectura de archivos IL v1 con firma `ARIL` y acepta también la ruta heredada `.aril`. Consulta el [contrato IL v2](docs/ARINO_IL_V2.md).
+La IL es interna: no sustituye la sintaxis pública en español. `arino_vm` es una VM nativa Linux x86-64. El compilador emite bytecode `.arino` con firma de cinco bytes `ARINO` y formato IL v2; ese bytecode no es código máquina de la CPU. La VM mantiene lectura de archivos IL v1 con firma `ARIL` y acepta también la ruta heredada `.aril`. Consulta el [contrato IL v2](docs/ARINO_IL_V2.md).
 
 Uso desde la raíz del repositorio:
 
 ```sh
-chmod +x arino_ast_compiler arino_il_vm
+chmod +x arino_ast_compiler arino_vm
 printf '%s' 'sumar 2 y 3' > suma.ari
 ./arino_ast_compiler --ast suma.ari
 ./arino_ast_compiler --check suma.ari
 ./arino_ast_compiler --compile suma.ari suma.arino
-./arino_il_vm --verify suma.arino
-./arino_il_vm --run suma.arino
+./arino_vm --verify suma.arino
+./arino_vm --run suma.arino
 ```
 
 ## VM IL v2

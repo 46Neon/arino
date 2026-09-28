@@ -21,7 +21,7 @@ jobs:
           file libarino_lexer.so | grep -F 'ELF 64-bit LSB shared object, x86-64'
           file arino_lexer_tests | grep -F 'ELF 64-bit LSB pie executable, x86-64'
           file arino_vm | grep -F 'ELF 64-bit LSB executable, x86-64'
-          file arino_ast_compiler | grep -F 'Python script'
+          file arino_ast_compiler | grep -F 'ELF 64-bit LSB executable, x86-64'
           file arino_ast_compiler_core | grep -F 'ELF 64-bit LSB executable, x86-64'
           chmod +x arino_vm arino_ast_compiler arino_ast_compiler_core arino_ast_compiler_scalar
       - name: Run lexer tests

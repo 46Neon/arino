@@ -2,7 +2,7 @@
 
 ## Estado
 
-El punto de entrada público `arino_ast_compiler` integra una pasada CLI para validaciones estáticas globales y delega en el compilador nativo `arino_ast_compiler_core` (Linux x86-64), que usa la biblioteca binaria existente `libarino_lexer.so`. El compilador nativo implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. Las nuevas compilaciones llevan firma `ARINO` y formato IL v2; la VM sigue aceptando IL v1 (`ARIL`) como formato heredado.
+El punto de entrada público `arino_ast_compiler` es nativo Linux x86-64 y ejecuta el núcleo `arino_ast_compiler_core`, que usa la biblioteca binaria existente `libarino_lexer.so`; el análisis de topología se realiza dentro del núcleo, sin una pasada CLI en Python. El compilador nativo implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. Las nuevas compilaciones llevan firma `ARINO` y formato IL v2; la VM sigue aceptando IL v1 (`ARIL`) como formato heredado.
 
 La sintaxis pública sigue en español. Esta versión implementa el subconjunto de expresiones aritméticas y asignaciones descrito aquí; no es todavía un parser de todas las construcciones que Ariño podría incorporar.
 

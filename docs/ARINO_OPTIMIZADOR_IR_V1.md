@@ -189,3 +189,11 @@ AST/HIR tipado → CFG SSA interno → optimizador OPT-IR → IR de máquina x86
 ```
 
 El IL v2 y la VM pueden conservarse como formato de compatibilidad y oráculo de ejecución mientras se valida el backend nativo. Esta especificación no afirma que esos pases o la generación nativa ya estén implementados.
+
+## 10. Restricción de implementación binaria
+
+- El optimizador y el backend se implementan y distribuyen como código máquina binario nativo; el repositorio público no incorpora implementaciones en C, ensamblador, Python, Bash u otros lenguajes, ni generadores temporales escritos en esos lenguajes.
+- No se sustituye el compilador por un wrapper interpretado ni se agrega un ejecutable auxiliar externo que se convierta en una ruta paralela al compilador.
+- La integración debe formar parte del artefacto binario nativo del compilador, conservar el flujo anterior que ya esté soportado y verificarse ejecutando el binario publicado contra pruebas positivas, negativas y diferenciales.
+- La CI valida y ejecuta el artefacto binario exacto; no debe presentar una reconstrucción desde código fuente no aprobado como si fuera la implementación del optimizador.
+- El target debe fijarse antes de generar instrucciones: el ELF actual es x86-64 Linux con dependencias dinámicas; cualquier target bare-metal x86/BIOS requiere contrato de arranque, mapa de memoria, interrupciones, salida de traps y ABI definidos por separado.

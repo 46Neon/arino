@@ -1,6 +1,6 @@
 # Ariño — frontend AST e IL en binarios nativos
 
-Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se mantiene en español. El repositorio distribuye artefactos nativos compilados sin fuentes de implementación C ni ensamblador. El punto de entrada `arino_ast_compiler` es un ejecutable nativo Linux x86-64 basado en `arino_ast_compiler_core`; la resolución semántica y la validación de topologías AI ocurren dentro del núcleo, sin una pasada Python externa.
+Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se mantiene en español. El repositorio distribuye artefactos nativos compilados sin fuentes de implementación C ni ensamblador. El punto de entrada `arino_ast_compiler` es un ejecutable nativo Linux x86-64 que reutiliza el lexer existente y delega la gramática heredada en `arino_ast_compiler_core`; incorpora además un parser estructural para declaraciones de agentes, bloques, condiciones y llamadas AI. Este parser amplía la sintaxis aceptada, pero todavía no añade resolución semántica de ámbitos ni emisión IL para esas construcciones. La validación semántica de las declaraciones AI heredadas sigue dentro del núcleo, sin una pasada Python externa.
 
 ## Lexer
 

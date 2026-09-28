@@ -38,7 +38,7 @@ printf '%s' "$unused_valid" >"$tmp/unused-valid.ari"
 printf '%s' 'modelo M entrada tensor[3] salida tensor[2];' >"$tmp/unused-no-layers.ari"
 "$compiler" --check "$tmp/unused-no-layers.ari" | grep -F 'OK análisis semántico Ariño'
 reject 'modelo M entrada tensor[3] salida tensor[2]; capa L : densa[4,2] para M;' 'entrada esperada=3, recibida=4' unused-first-layer-input
-reject 'modelo M entrada tensor[3] salida tensor[2]; capa A : densa[3,4] para M; capa B : densa[5,2] para M;' 'entrada esperada=4, recibida=5' unused-disconnected-layers
+reject 'modelo M entrada tensor[3] salida tensor[2]; capa A : densa[3,4] para M; capa B : densa[5,2] para M;' 'entrada esperada=4, recibida=5' unused-layer-edge-mismatch
 reject 'modelo M entrada tensor[3] salida tensor[2]; capa L : densa[3,4] para M;' 'salida declarada del modelo=2' unused-final-layer-output
 # Offsets are source byte offsets, including preceding multibyte UTF-8 text.
 printf '%s' 'datos ñ : tensor[2,3]; modelo M entrada tensor[3] salida tensor[2]; capa L : densa[4,2] para M;' >"$tmp/unused-offset.ari"

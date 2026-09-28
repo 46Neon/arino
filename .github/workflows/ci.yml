@@ -90,6 +90,8 @@ jobs:
           expect_reject 'x = 3; x = 2.0'
       - name: Validate Spanish AI grammar, typed HIR and backend rejection
         run: bash tests/test_ai_semantics.sh
+      - name: Validate native extended parser grammar, AST and recovery
+        run: bash tests/test_parser_extended.sh
       - name: Verify preserved scalar compiler fallback binary
         run: file arino_ast_compiler_scalar | grep -F 'ELF 64-bit LSB executable, x86-64'
       - name: Verify and execute valid IL fixtures

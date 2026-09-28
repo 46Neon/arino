@@ -2,9 +2,9 @@
 
 ## Estado
 
-El punto de entrada público `arino_ast_compiler` es nativo Linux x86-64 y ejecuta el núcleo `arino_ast_compiler_core`, que usa la biblioteca binaria existente `libarino_lexer.so`; el análisis de topología se realiza dentro del núcleo, sin una pasada CLI en Python. El compilador nativo implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. Las nuevas compilaciones llevan firma `ARINO` y formato IL v2; la VM sigue aceptando IL v1 (`ARIL`) como formato heredado.
+El punto de entrada público `arino_ast_compiler` es nativo Linux x86-64 y reutiliza `libarino_lexer.so`. Para el subconjunto escalar y la gramática AI anterior, delega en `arino_ast_compiler_core`, que mantiene su AST, análisis semántico y emisión IL. El punto de entrada incluye además un parser recursivo-descendente nativo para las formas estructuradas de agente y control descritas en §7. Ninguna lógica del parser público requiere una pasada CLI en Python. `.arino` es la extensión canónica del bytecode; las rutas `.aril` siguen siendo legibles por compatibilidad. Las nuevas compilaciones del núcleo llevan firma `ARINO` e IL v2; la VM sigue aceptando IL v1 (`ARIL`) como formato heredado.
 
-La sintaxis pública sigue en español. Esta versión implementa el subconjunto de expresiones aritméticas y asignaciones descrito aquí; no es todavía un parser de todas las construcciones que Ariño podría incorporar.
+La sintaxis pública sigue en español. El backend del núcleo sigue cubriendo el subconjunto escalar y AI ya descrito; las construcciones nuevas de agente/control tienen por ahora validación estructural y AST en el punto de entrada, pero todavía no bajan a IL.
 
 ## 1. Nodos y almacenamiento
 
@@ -109,6 +109,43 @@ printf '%s' 'sumar 2 y 3' > suma.ari
 
 `--ast` imprime opcode binario, tipo, span original, contexto y nodos hijos. `--check` ejecuta análisis semántico sin emitir bytecode. `--compile` valida, pliega constantes y escribe `.arino`; después se puede usar `--verify`, `--disasm`, `--run` o `--trace` del VM. Los errores de sintaxis/tipo/scope incluyen el offset en bytes del fuente.
 
-## Límites de v1
+## 7. Parser nativo para agentes y control (extensión estructural)
 
-El compilador cubre expresiones I64/F64, paréntesis, las familias aritméticas indicadas, asignaciones y un scope de módulo. Una pasada semántica AI adicional valida y produce HIR tipado para el pequeño subconjunto de datos/modelo/capa documentado en [ARINO_SEMANTICA_AI_V1.md](ARINO_SEMANTICA_AI_V1.md), pero no genera ejecución tensorial: la VM IL v2 aún no tiene esos opcodes y `--compile` rechaza tales programas sin emitir bytecode. El compilador tampoco genera condiciones, bucles, funciones, llamadas ni bloques anidados, aunque la VM IL v2 ya tiene algunas instrucciones de control de flujo. El parser/AST es funcional para este subconjunto y está preparado para ampliar nodos y scopes; no debe confundirse con el compilador integral de todo Ariño. El repositorio distribuye el compilador como binario y no guarda fuentes C o ensamblador.
+La entrada nativa reutiliza el lexer compartido y activa esta extensión gramatical al encontrar declaraciones de agente, condiciones estructuradas, acciones AI con la palabra explícita `modelo` o llamadas genéricas. El resto de los programas existentes sigue el camino del compilador nativo previo para conservar su semántica y generación IL.
+
+La gramática aceptada por esta extensión es determinista y deliberadamente explícita:
+
+```text
+programa       := sentencia*
+sentencia      := agente | datos | modelo | capa | entrenamiento
+                 | accion_ai | condicion | llamada | asignacion | expresion ";"
+agente         := "define" "agente" IDENT bloque [";"]
+bloque         := "{" sentencia* "}"
+datos          := "datos" IDENT ":" "tensor" "[" POS_INT ("," POS_INT)* "]" ";"
+modelo         := "modelo" IDENT "entrada" "tensor" "[" POS_INT "]"
+                 "salida" "tensor" "[" POS_INT "]" ";"
+capa           := "capa" IDENT ":" "densa" "[" POS_INT "," POS_INT "]"
+                 "para" IDENT ";"
+entrenamiento  := ("entrena" | "entrenar") ["el"] ["modelo"] IDENT
+                 "con" ["los"] ["datos"] IDENT ";"
+accion_ai      := ("clasifica" | "clasificar" | "predice" | "predecir")
+                 ["el"] ["modelo"] IDENT "con" ["los"] ["datos"] IDENT ";"
+condicion      := "si" ["el" | "la" | "los" | "las"] expresion comparador
+                 expresion "entonces" bloque ["sino" bloque] [";"]
+comparador     := "es" | "igual" "a" | "distinto" "de" | "mayor" "que"
+                 | "menor" "que" | "mayor" "o" "igual" "que"
+                 | "menor" "o" "igual" "que"
+llamada        := ("invoca" | "llama") ["a"] ["la"] ("funcion" | "función")
+                 IDENT "con" "(" [expresion ("," expresion)*] ")" ";"
+asignacion     := IDENT "=" expresion ";"
+```
+
+`POS_INT` es un token entero decimal estrictamente mayor que cero. Las formas de tensor admiten como máximo ocho dimensiones. Las expresiones usan el conjunto de alias aritméticos de §2, precedencia MUL/DIV sobre ADD/SUB y asociatividad izquierda; las comparaciones y conjunciones se escriben con las palabras mostradas, no con operadores simbólicos. Los nombres se toman del lexer existente. Los spans y diagnósticos se expresan como offsets de bytes UTF-8.
+
+`--ast` imprime nodos estructurales `AGENT_DECL`, `BLOCK`, declaraciones de datos/modelo/capa, entrenamiento/llamada AI, `IF`, asignaciones y expresiones. `--check` comprueba sintaxis y estructura y puede informar varios errores recuperándose en `;` y `}`. Los mensajes de esta pasada se emiten en español. La extensión limita fuente a 65 536 bytes, 8 192 tokens, 16 384 nodos y 128 niveles de anidamiento; un bloque admite como máximo 64 sentencias hijas.
+
+**Límites importantes:** esta pasada no hace aún resolución de nombres/tipos por ámbito para los nodos nuevos ni análisis de flujo, y no implementa ciclos, funciones definidas por el usuario, literales de texto, ni llamadas con sintaxis libre. Tampoco emite IL para agentes, bloques, condiciones, acciones AI o llamadas genéricas. Por tanto `--compile` valida estructura y luego rechaza esas construcciones sin crear un `.arino` parcial. Las declaraciones/acciones AI en la gramática heredada sin agente explícito continúan usando el análisis semántico HIR existente; eso no significa que el nuevo AST tenga esa semántica integrada.
+
+## Límites del backend v1
+
+El backend nativo ya cubre expresiones I64/F64, paréntesis, las familias aritméticas indicadas, asignaciones y un scope de módulo. Una pasada semántica AI valida y produce HIR tipado para el pequeño subconjunto de datos/modelo/capa documentado en [ARINO_SEMANTICA_AI_V1.md](ARINO_SEMANTICA_AI_V1.md), pero no genera ejecución tensorial: la VM IL v2 aún no tiene esos opcodes y `--compile` rechaza tales programas sin emitir bytecode. La extensión §7 es un parser estructural, no el compilador integral de todo Ariño. El repositorio distribuye artefactos binarios; esta extensión no añade fuentes C o ensamblador al repositorio.

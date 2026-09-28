@@ -2,7 +2,7 @@
 
 ## Estado
 
-El repositorio incorpora `arino_ast_compiler`, un ejecutable nativo Linux x86-64 que usa la biblioteca binaria existente `libarino_lexer.so`. Implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.aril` ejecutables por `arino_il_vm`.
+El repositorio incorpora `arino_ast_compiler`, un ejecutable nativo Linux x86-64 que usa la biblioteca binaria existente `libarino_lexer.so`. Implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_il_vm`. `.aril` queda como extensión heredada compatible; la cabecera binaria sigue identificando el formato ARIL v1.
 
 La sintaxis pública sigue en español. Esta versión implementa el subconjunto de expresiones aritméticas y asignaciones descrito aquí; no es todavía un parser de todas las construcciones que Ariño podría incorporar.
 
@@ -25,7 +25,7 @@ Cada nodo vive en una arena contigua y tiene un opcode de 16 bits, tipo de valor
 | 40 | `name_length` | u32 |
 | 44 | `scope_id` | u32 |
 
-Tamaño del nodo: 48 bytes. El ejecutable verifica tamaño y offsets del ABI antes de analizar. Los arreglos de hijos también salen de una arena contigua; no se hace una reserva individual por nodo. Las arenas preasignadas admiten hasta 16 384 nodos, 32 768 enlaces a hijos, 8 192 tokens, 2 048 variables y 65 536 bytes de fuente. Si se excede un límite, el compilador falla con diagnóstico, sin escribir un `.aril` parcial.
+Tamaño del nodo: 48 bytes. El ejecutable verifica tamaño y offsets del ABI antes de analizar. Los arreglos de hijos también salen de una arena contigua; no se hace una reserva individual por nodo. Las arenas preasignadas admiten hasta 16 384 nodos, 32 768 enlaces a hijos, 8 192 tokens, 2 048 variables y 65 536 bytes de fuente. Si se excede un límite, el compilador falla con diagnóstico, sin escribir un `.arino` parcial.
 
 Los opcodes del AST son identificadores binarios propios del frontend, distintos de los opcodes de la VM:
 
@@ -101,13 +101,13 @@ chmod +x arino_ast_compiler arino_il_vm
 printf '%s' 'sumar 2 y 3' > suma.ari
 ./arino_ast_compiler --ast suma.ari
 ./arino_ast_compiler --check suma.ari
-./arino_ast_compiler --compile suma.ari suma.aril
-./arino_il_vm --verify suma.aril
-./arino_il_vm --disasm suma.aril
-./arino_il_vm --run suma.aril
+./arino_ast_compiler --compile suma.ari suma.arino
+./arino_il_vm --verify suma.arino
+./arino_il_vm --disasm suma.arino
+./arino_il_vm --run suma.arino
 ```
 
-`--ast` imprime opcode binario, tipo, span original, contexto y nodos hijos. `--check` ejecuta análisis semántico sin emitir bytecode. `--compile` valida, pliega constantes y escribe `.aril`; después se puede usar `--verify`, `--disasm`, `--run` o `--trace` del VM. Los errores de sintaxis/tipo/scope incluyen el offset en bytes del fuente.
+`--ast` imprime opcode binario, tipo, span original, contexto y nodos hijos. `--check` ejecuta análisis semántico sin emitir bytecode. `--compile` valida, pliega constantes y escribe `.arino`; después se puede usar `--verify`, `--disasm`, `--run` o `--trace` del VM. Los errores de sintaxis/tipo/scope incluyen el offset en bytes del fuente.
 
 ## Límites de v1
 

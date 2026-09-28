@@ -34,10 +34,10 @@ jobs:
           compile_run() {
             local name="$1" source="$2" expected="$3"
             printf '%s' "$source" > "$tmp/$name.ari"
-            ./arino_ast_compiler --compile "$tmp/$name.ari" "$tmp/$name.aril"
-            ./arino_il_vm --verify "$tmp/$name.aril"
+            ./arino_ast_compiler --compile "$tmp/$name.ari" "$tmp/$name.arino"
+            ./arino_il_vm --verify "$tmp/$name.arino"
             local actual
-            actual="$(./arino_il_vm --run "$tmp/$name.aril")"
+            actual="$(./arino_il_vm --run "$tmp/$name.arino")"
             printf '%s => %s\n' "$source" "$actual"
             test "$actual" = "$expected"
           }
@@ -65,12 +65,12 @@ jobs:
           compile_run div-con 'dividir 8 con 2' 'RESULT I64(4)'
 
           compile_run locals 'x = 7; y = x por 2; y menos 3' 'RESULT I64(11)'
-          ./arino_ast_compiler --compile "$tmp/locals.ari" "$tmp/locals.aril" | grep -F 'locals=2'
-          ./arino_il_vm --disasm "$tmp/locals.aril" | grep -F 'STORE        0'
-          ./arino_il_vm --disasm "$tmp/locals.aril" | grep -F 'STORE        1'
+          ./arino_ast_compiler --compile "$tmp/locals.ari" "$tmp/locals.arino" | grep -F 'locals=2'
+          ./arino_il_vm --disasm "$tmp/locals.arino" | grep -F 'STORE        0'
+          ./arino_il_vm --disasm "$tmp/locals.arino" | grep -F 'STORE        1'
           compile_run f64 '0.5 más 1.25' 'RESULT F64(1.75)'
           compile_run folded '(2 más 3) por 4' 'RESULT I64(20)'
-          disasm="$(./arino_il_vm --disasm "$tmp/folded.aril")"
+          disasm="$(./arino_il_vm --disasm "$tmp/folded.arino")"
           grep -F 'PUSH_I64     20' <<< "$disasm"
           test "$(grep -c 'PUSH_I64' <<< "$disasm")" -eq 1
           test "$(grep -c 'HALT' <<< "$disasm")" -eq 1
@@ -147,4 +147,5 @@ jobs:
             arino_ast_compiler
             arino_il_vm
             arino_il_*.aril
+            arino_*.arino
           if-no-files-found: error

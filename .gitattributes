@@ -2,5 +2,6 @@ arino_lexer_tests linguist-generated=true
 libarino_lexer.so linguist-generated=true
 arino_vm linguist-generated=true
 arino_il_*.arino linguist-generated=true
-/arino_ast_compiler binary linguist-generated=true
+/arino_ast_compiler_core binary linguist-generated=true
+/arino_ast_compiler_scalar binary linguist-generated=true
 arino_*.arino linguist-generated=true

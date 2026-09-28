@@ -2,7 +2,7 @@
 
 ## Estado
 
-El repositorio incorpora `arino_ast_compiler`, un ejecutable nativo Linux x86-64 que usa la biblioteca binaria existente `libarino_lexer.so`. Implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. Las nuevas compilaciones llevan firma `ARINO` y formato IL v2; la VM sigue aceptando IL v1 (`ARIL`) como formato heredado.
+El punto de entrada público `arino_ast_compiler` integra una pasada CLI para validaciones estáticas globales y delega en el compilador nativo `arino_ast_compiler_core` (Linux x86-64), que usa la biblioteca binaria existente `libarino_lexer.so`. El compilador nativo implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. Las nuevas compilaciones llevan firma `ARINO` y formato IL v2; la VM sigue aceptando IL v1 (`ARIL`) como formato heredado.
 
 La sintaxis pública sigue en español. Esta versión implementa el subconjunto de expresiones aritméticas y asignaciones descrito aquí; no es todavía un parser de todas las construcciones que Ariño podría incorporar.
 
@@ -111,4 +111,4 @@ printf '%s' 'sumar 2 y 3' > suma.ari
 
 ## Límites de v1
 
-El compilador cubre expresiones I64/F64, paréntesis, las familias aritméticas indicadas, asignaciones y un scope de módulo. Todavía no genera condiciones, bucles, funciones, llamadas, tipos de tensor/IA ni bloques anidados, aunque la VM IL v2 ya tiene algunas instrucciones de control de flujo. El parser/AST es funcional para este subconjunto y está preparado para ampliar nodos y scopes; no debe confundirse con el compilador integral de todo Ariño. El repositorio distribuye el compilador como binario y no guarda fuentes C o ensamblador.
+El compilador cubre expresiones I64/F64, paréntesis, las familias aritméticas indicadas, asignaciones y un scope de módulo. Una pasada semántica AI adicional valida y produce HIR tipado para el pequeño subconjunto de datos/modelo/capa documentado en [ARINO_SEMANTICA_AI_V1.md](ARINO_SEMANTICA_AI_V1.md), pero no genera ejecución tensorial: la VM IL v2 aún no tiene esos opcodes y `--compile` rechaza tales programas sin emitir bytecode. El compilador tampoco genera condiciones, bucles, funciones, llamadas ni bloques anidados, aunque la VM IL v2 ya tiene algunas instrucciones de control de flujo. El parser/AST es funcional para este subconjunto y está preparado para ampliar nodos y scopes; no debe confundirse con el compilador integral de todo Ariño. El repositorio distribuye el compilador como binario y no guarda fuentes C o ensamblador.

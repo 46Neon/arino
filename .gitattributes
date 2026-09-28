@@ -1,2 +1,5 @@
-# Native generated artifacts (source implementations are intentionally not shipped).
+arino_lexer_tests linguist-generated=true
+libarino_lexer.so linguist-generated=true
+arino_il_vm linguist-generated=true
+arino_il_*.aril linguist-generated=true
 /arino_ast_compiler binary linguist-generated=true

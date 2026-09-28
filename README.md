@@ -10,14 +10,16 @@ Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se m
 
 ## Frontend AST (subconjunto v1)
 
-`arino_ast_compiler` consume el lexer y compila expresiones aritméticas I64/F64 y asignaciones separadas por punto y coma. Reconoce las formas visibles en español —por ejemplo, `sumar 2 y 3`, `2 más 3` y `dividir 8 con 2`—, conserva spans del fuente, valida tipos y variables, pliega expresiones constantes seguras y emite Ariño IL v2. Incluye un volcado AST y un modo de análisis sin emisión. La [especificación AST v1](docs/ARINO_AST_V1.md) documenta nodos, alias, gramática admitida y límites.
+`arino_ast_compiler` conserva el compilador escalar para expresiones aritméticas I64/F64 y asignaciones, y agrega una pasada semántica para un subconjunto AI explícito en español: declaraciones de `datos`/`modelo`/`capa densa`, resolución de referencias, formas estáticas, compatibilidad de capas y estado entrenado antes de inferencia. `--check` y `--ast` muestran su HIR tipado y spans. La gramática está en [Semántica AI v1](docs/ARINO_SEMANTICA_AI_V1.md); la [especificación AST v1](docs/ARINO_AST_V1.md) describe el compilador escalar.
+
+La validación AI no significa ejecución de redes: la VM IL v2 no tiene opcodes para tensores, capas o entrenamiento. Para esas construcciones `--compile` falla claramente y no escribe un `.arino` parcial. El compilador escalar mantiene la salida IL v2 existente.
 
 La IL es interna: no sustituye la sintaxis pública en español. `arino_vm` es una VM nativa Linux x86-64. El compilador emite bytecode `.arino` con firma de cinco bytes `ARINO` y formato IL v2; ese bytecode no es código máquina de la CPU. La VM mantiene lectura de archivos IL v1 con firma `ARIL` y acepta también la ruta heredada `.aril`. Consulta el [contrato IL v2](docs/ARINO_IL_V2.md).
 
 Uso desde la raíz del repositorio:
 
 ```sh
-chmod +x arino_ast_compiler arino_vm
+chmod +x arino_ast_compiler arino_ast_compiler_scalar arino_vm
 printf '%s' 'sumar 2 y 3' > suma.ari
 ./arino_ast_compiler --ast suma.ari
 ./arino_ast_compiler --check suma.ari
@@ -34,4 +36,4 @@ CI valida ELF x86-64, ejecuta pruebas del lexer, comprueba la emisión y ejecuci
 
 ## Límites
 
-Este frontend aún no analiza toda la gramática de Ariño. No admite bloques, scopes anidados, condiciones, bucles, funciones/llamadas ni sintaxis específica de tensores o IA; tampoco aplica promociones implícitas entre I64 y F64. El hecho de que la VM IL tenga instrucciones de control de flujo no implica que este frontend genere esas construcciones. Por tanto, el AST y el compilador son funcionales para el subconjunto documentado, no un compilador integral de Ariño. Los binarios publicados son específicos de Linux x86-64 y no son portables a otras arquitecturas.
+Este frontend aún no analiza toda la gramática de Ariño. No admite bloques, scopes anidados, condiciones, bucles, funciones/llamadas ni ejecución AI/tensorial. La pasada AI solo valida el subconjunto estático especificado y no lo traduce a bytecode ejecutable; tampoco aplica promociones implícitas entre I64 y F64. El hecho de que la VM IL tenga instrucciones de control de flujo no implica que este frontend genere esas construcciones. Por tanto, el AST y el compilador son funcionales para el subconjunto documentado, no un compilador integral de Ariño. Los binarios publicados son específicos de Linux x86-64 y no son portables a otras arquitecturas.

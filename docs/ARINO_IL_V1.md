@@ -4,7 +4,7 @@
 
 Esta especificación define el formato del bytecode y el contrato de ejecución de la VM. Es una capa interna: **no cambia la sintaxis visible en español de Ariño**. El flujo previsto es fuente Ariño en español → lexer/parser → AST → IL binario.
 
-Esta entrega incorpora la VM, verificador, desensamblador y fixtures `.aril` ejecutables como casos heredados de compatibilidad. Los nuevos archivos usan la extensión `.arino`; la VM acepta ambas extensiones y valida el contenido por su cabecera `ARIL`. El bytecode no es código máquina de la CPU: lo ejecuta la VM nativa `arino_il_vm`, un ELF Linux x86-64. La IL es interna y no cambia la sintaxis visible en español de Ariño.
+Esta entrega incorpora la VM, verificador, desensamblador y fixtures ejecutables con la extensión canónica `.arino`. Los nombres heredados con sufijo `.aril` siguen siendo legibles: la extensión es una convención de archivo, y la VM valida el contenido por su cabecera `ARIL`. CI comprueba esta compatibilidad usando una copia temporal de una fixture `.arino` con nombre `.aril`. El formato binario ARIL v1 y sus bytes no cambian. El bytecode no es código máquina de la CPU: lo ejecuta la VM nativa `arino_il_vm`, un ELF Linux x86-64. La IL es interna y no cambia la sintaxis visible en español de Ariño.
 
 ## 1. ISA stack-based
 
@@ -102,7 +102,7 @@ La VM proporciona `--disasm` (offset de código, bytes, mnemonic y operandos) y 
 
 ## Fixture binario
 
-La fixture heredada `arino_il_demo.aril` tiene encabezado ARIL v1, sin constantes, `local_count=1`, `max_stack=2`, código de 36 bytes. Calcula 6+7, guarda/carga el slot 0, resta 10 y termina con I64 3. SHA-256: `ec2f9a207b69501577cf7eef9d60f6ce60ad2a1cbbc4f5785904600ff7d61f7a`.
+La fixture `arino_il_demo.arino` tiene encabezado ARIL v1, sin constantes, `local_count=1`, `max_stack=2`, código de 36 bytes. Calcula 6+7, guarda/carga el slot 0, resta 10 y termina con I64 3. SHA-256: `ec2f9a207b69501577cf7eef9d60f6ce60ad2a1cbbc4f5785904600ff7d61f7a`.
 
 ## VM y pruebas disponibles
 
@@ -116,8 +116,8 @@ El ejecutable `arino_il_vm` ofrece (tras descargarlo o clonarlo, ejecutar `chmod
 ./arino_il_vm --max-steps 20 archivo.arino
 ```
 
-El verificador comprueba encabezado/secciones, opcodes e inmediatos, índices y destinos de salto en fronteras de instrucción. La VM ejecuta la ISA documentada y detecta trampas como overflow I64, división por cero, underflow, tipos incompatibles, locals no inicializados y límite de instrucciones. GitHub Actions verifica el formato ELF x86-64, verifica/ejecuta fixtures válidas con resultados exactos, confirma rechazos y traps, y publica el VM junto con las fixtures como artefacto.
+El verificador comprueba encabezado/secciones, opcodes e inmediatos, índices y destinos de salto en fronteras de instrucción. La VM ejecuta la ISA documentada y detecta trampas como overflow I64, división por cero, underflow, tipos incompatibles, locals no inicializados y límite de instrucciones. GitHub Actions verifica el formato ELF x86-64, verifica/ejecuta fixtures válidas con resultados exactos, confirma rechazos y traps, y publica el VM junto con las fixtures `.arino` como artefacto y comprueba una ruta temporal con sufijo `.aril` heredado.
 
-Fixtures `.aril` heredadas de compatibilidad, válidas: `arino_il_demo.aril` (resultado 3 con LOAD/STORE), `arino_il_loop.aril` (bucle y ramas, 10), `arino_il_stack.aril` (DUP/SWAP/POP, 5), `arino_il_branch.aril` (EQ_I64/JNZ, 1), `arino_il_float.aril` (constantes y aritmética/comparaciones F64), `arino_il_constants.aril` (pool I64, 84), `arino_il_f64_imm.aril` (PUSH_F64, 4) y `arino_il_div_i64.aril` (20/4, 5). Las fixtures `.aril` negativas heredadas comprueban saltos inválidos, opcode desconocido, inmediato truncado, división por cero, underflow, tipos incorrectos, overflow y agotamiento del límite de pasos.
+Fixtures `.arino` válidas: `arino_il_demo.arino` (resultado 3 con LOAD/STORE), `arino_il_loop.arino` (bucle y ramas, 10), `arino_il_stack.arino` (DUP/SWAP/POP, 5), `arino_il_branch.arino` (EQ_I64/JNZ, 1), `arino_il_float.arino` (constantes y aritmética/comparaciones F64), `arino_il_constants.arino` (pool I64, 84), `arino_il_f64_imm.arino` (PUSH_F64, 4) y `arino_il_div_i64.arino` (20/4, 5). Las fixtures negativas `.arino` comprueban saltos inválidos, opcode desconocido, inmediato truncado, división por cero, underflow, tipos incorrectos, overflow y agotamiento del límite de pasos.
 
 **Límite:** el frontend Ariño→AST→IL existe y se valida en CI solo para el subconjunto de aritmética y asignaciones definido en `ARINO_AST_V1.md`. No analiza ni emite bloques, condiciones, bucles, funciones/llamadas, scopes anidados o sintaxis de tensores/IA. El flujo no equivale a un compilador integral de Ariño.

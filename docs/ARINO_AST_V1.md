@@ -2,7 +2,7 @@
 
 ## Estado
 
-El repositorio incorpora `arino_ast_compiler`, un ejecutable nativo Linux x86-64 que usa la biblioteca binaria existente `libarino_lexer.so`. Implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_il_vm`. `.aril` queda como extensión heredada compatible; la cabecera binaria sigue identificando el formato ARIL v1.
+El repositorio incorpora `arino_ast_compiler`, un ejecutable nativo Linux x86-64 que usa la biblioteca binaria existente `libarino_lexer.so`. Implementa un AST real en memoria, normalización de operadores en español, análisis de tipos/variables, plegado de constantes y emisión de archivos `.arino` ejecutables por `arino_il_vm`. `.arino` es la extensión canónica para el bytecode; las rutas con el sufijo `.aril` siguen siendo legibles por compatibilidad. La cabecera binaria continúa identificando el formato ARIL v1, sin cambiar el bytecode.
 
 La sintaxis pública sigue en español. Esta versión implementa el subconjunto de expresiones aritméticas y asignaciones descrito aquí; no es todavía un parser de todas las construcciones que Ariño podría incorporar.
 

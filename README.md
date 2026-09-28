@@ -10,9 +10,9 @@ Prototipo de infraestructura para Ariño, un lenguaje cuya sintaxis visible se m
 
 ## Frontend AST (subconjunto v1)
 
-`arino_ast_compiler` consume el lexer y compila expresiones aritméticas I64/F64 y asignaciones separadas por punto y coma. Reconoce las formas visibles en español —por ejemplo, `sumar 2 y 3`, `2 más 3` y `dividir 8 con 2`—, conserva spans del fuente, valida tipos y variables, pliega expresiones constantes seguras y emite Ariño IL v1. Incluye un volcado AST y un modo de análisis sin emisión. La [especificación AST v1](docs/ARINO_AST_V1.md) documenta nodos, alias, gramática admitida y límites.
+`arino_ast_compiler` consume el lexer y compila expresiones aritméticas I64/F64 y asignaciones separadas por punto y coma. Reconoce las formas visibles en español —por ejemplo, `sumar 2 y 3`, `2 más 3` y `dividir 8 con 2`—, conserva spans del fuente, valida tipos y variables, pliega expresiones constantes seguras y emite Ariño IL v2. Incluye un volcado AST y un modo de análisis sin emisión. La [especificación AST v1](docs/ARINO_AST_V1.md) documenta nodos, alias, gramática admitida y límites.
 
-La IL es interna: esta etapa no traduce ni reemplaza la sintaxis pública en español. `arino_il_vm` es una VM/verificador/desensamblador nativa Linux x86-64; los archivos nuevos `.arino` son bytecode de la VM, no código máquina de la CPU; la extensión `.arino` es la convención para los archivos de bytecode; los nombres heredados `.aril` siguen siendo legibles por compatibilidad. El formato y la cabecera `ARIL` v1 no cambian. Consulta el [contrato IL v1](docs/ARINO_IL_V1.md).
+La IL es interna: no sustituye la sintaxis pública en español. `arino_il_vm` es una VM nativa Linux x86-64. El compilador emite bytecode `.arino` con firma de cinco bytes `ARINO` y formato IL v2; ese bytecode no es código máquina de la CPU. La VM mantiene lectura de archivos IL v1 con firma `ARIL` y acepta también la ruta heredada `.aril`. Consulta el [contrato IL v2](docs/ARINO_IL_V2.md).
 
 Uso desde la raíz del repositorio:
 
@@ -26,11 +26,11 @@ printf '%s' 'sumar 2 y 3' > suma.ari
 ./arino_il_vm --run suma.arino
 ```
 
-## VM IL v1
+## VM IL v2
 
-La VM valida encabezado y bytecode (opcodes, operandos, índices y destinos de salto) y ejecuta operaciones I64/F64, comparaciones, saltos y slots locales; informa trampas de ejecución, incluidos overflow, división por cero, tipos incompatibles, underflow y agotamiento del límite de instrucciones. Las fixtures binarias ahora usan `.arino` y cubren resultados correctos, control de flujo, constantes, operaciones de pila, aritmética/comparación F64, verificación negativa y traps. CI también copia una fixture a un nombre temporal `.aril` y comprueba su lectura como ruta heredada; los bytes del formato ARIL v1 no cambian.
+La VM valida encabezado y bytecode (opcodes, operandos, índices y destinos de salto), y detecta overflow, división por cero, tipos incompatibles, underflow y agotamiento del límite de instrucciones. Las fixtures `.arino` prueban IL v2; una fixture v1 se conserva para comprobar compatibilidad. CI confirma también que las rutas `.aril` antiguas siguen siendo legibles.
 
-CI valida los ELF x86-64, ejecuta las pruebas del lexer, verifica las fixtures `.arino` y la compatibilidad de lectura con sufijo `.aril` y verifica compilación/emisión/ejecución del subconjunto AST, errores semánticos y plegado de constantes. También publica los binarios y fixtures como artefacto descargable.
+CI valida ELF x86-64, ejecuta pruebas del lexer, comprueba la emisión y ejecución de IL v2, la lectura de v1 y los errores semánticos del subconjunto AST; también publica binarios y fixtures como artefacto descargable.
 
 ## Límites
 

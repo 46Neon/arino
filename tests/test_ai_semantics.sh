@@ -29,6 +29,23 @@ reject 'datos x : tensor[8,0];' 'las dimensiones deben ser mayores que cero' zer
 reject 'datos x : tensor[8,3]; modelo M entrada tensor[3,2] salida tensor[2];' 'rango 1' model-rank
 reject 'modelo M entrada tensor[3] salida tensor[2]; capa L : densa[4,2] para M;' 'entrada esperada=3, recibida=4' layer-input-mismatch
 reject 'modelo M entrada tensor[3] salida tensor[2]; capa L : densa[3,4] para M;' 'salida declarada del modelo=2' model-output-mismatch
+
+# Whole-program topology checking also applies to declared-but-unused models.
+# A model with no layers remains legal until an action tries to use it.
+unused_valid='modelo M entrada tensor[3] salida tensor[2]; capa oculta : densa[3,4] para M; capa final : densa[4,2] para M;'
+printf '%s' "$unused_valid" >"$tmp/unused-valid.ari"
+"$compiler" --check "$tmp/unused-valid.ari" | grep -F 'OK análisis semántico Ariño'
+printf '%s' 'modelo M entrada tensor[3] salida tensor[2];' >"$tmp/unused-no-layers.ari"
+"$compiler" --check "$tmp/unused-no-layers.ari" | grep -F 'OK análisis semántico Ariño'
+reject 'modelo M entrada tensor[3] salida tensor[2]; capa L : densa[4,2] para M;' 'entrada esperada=3, recibida=4' unused-first-layer-input
+reject 'modelo M entrada tensor[3] salida tensor[2]; capa A : densa[3,4] para M; capa B : densa[5,2] para M;' 'capas desconectadas' unused-disconnected-layers
+reject 'modelo M entrada tensor[3] salida tensor[2]; capa L : densa[3,4] para M;' 'salida declarada del modelo=2' unused-final-layer-output
+# Offsets are source byte offsets, including preceding multibyte UTF-8 text.
+printf '%s' 'datos ñ : tensor[2,3]; modelo M entrada tensor[3] salida tensor[2]; capa L : densa[4,2] para M;' >"$tmp/unused-offset.ari"
+if "$compiler" --check "$tmp/unused-offset.ari" >"$tmp/unused-offset.log" 2>&1; then
+  echo 'expected byte-offset diagnostic for invalid unused topology' >&2; exit 1
+fi
+grep -E 'Error semántico en byte [0-9]+: entrada esperada=3, recibida=4' "$tmp/unused-offset.log"
 reject 'datos x : tensor[8,4]; modelo M entrada tensor[3] salida tensor[2]; capa L : densa[3,2] para M; entrenar M con x;' 'espera características=3, los datos recibidos tienen 4' data-shape-mismatch
 reject 'datos x : tensor[8,3]; modelo M entrada tensor[3] salida tensor[2]; capa L : densa[3,2] para M; clasificar M con x;' 'debe entrenarse antes' predict-before-train
 reject 'entrenar M;' "se esperaba 'con'" incomplete-action
